@@ -8,6 +8,10 @@
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
+  "scripts": {
+    "build": "bun run ./scripts/build.ts",
+    "run": "bun run ./src/index.ts"
+  },
   "dependencies": {
     "commander": "^13.1.0",
     "elysia": "^1.2.25",
