@@ -50,6 +50,7 @@ export async function makeNewTree(filepaths: string[], blobsDirectory: string): 
 }
 
 export function getFilepathsInDirectory(rootDirectory: string, ignorePaths: string[], ignoreRelativeTo: string | undefined): string[] {
+  // when you first call this function, you want rootDir and ignoreRelativeTo to be the same path most likely
   if (ignoreRelativeTo === undefined) {
     ignoreRelativeTo = rootDirectory;
   }
@@ -61,10 +62,9 @@ export function getFilepathsInDirectory(rootDirectory: string, ignorePaths: stri
   for (const childPath of childPaths) {
     const filepath = path.join(rootDirectory, childPath);
 
+    // we need to get this relative path so that
     const relativePath = getRelativePath(filepath, ignoreRelativeTo);
-
-    // we don't want to use the absolute filepath
-    if (isIgnored(childPath, ignorePaths)) {
+    if (isIgnored(relativePath, ignorePaths)) {
       continue;
     }
 
@@ -166,4 +166,19 @@ export function getRelativePath(absoluteFilepath: string, relativeDir: string): 
   
   // Return empty string for the directory itself
   return relativePortion || '.';
+}
+
+export function getIgnorePaths(ignoreFilename: string): string[] {
+  const lines = fs.readFileSync(ignoreFilename).toString().split("\n");
+  const ignorePaths: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("#")) {
+      continue;
+    }
+
+    ignorePaths.push(line);
+  }
+
+  return ignorePaths;
 }
