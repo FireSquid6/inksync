@@ -61,7 +61,7 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
   const compressed = Bun.gzipSync(await file.text());
   hasher.update(compressed);
 
-  const hash = hasher.digest("base64");
+  const hash = hasher.digest("ascii");
 
   // we need to ensure there is no hash collision
   let collisionIndex = 0;
