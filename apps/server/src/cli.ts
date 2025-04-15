@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { makeCommit } from "./commit";
 
 const program = new Command();
 
@@ -6,7 +7,8 @@ program
   .command("test-commit")
   .description("Runs a test commit to ensure that everything is working properly")
   .action(() => {
-    console.log("running an example commit!");
+    const directory = process.cwd();
+    makeCommit(directory);
   });
 
 program
