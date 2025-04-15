@@ -1,3 +1,7 @@
 This has lots of text!
 
 We have some code in a different file as well as the entire Bible (about 4.5 MB) in `bible.txt`. This stuff exists purely to test inksync
+
+---
+
+Now I've changed main.txt. We should expect the next commit to reflect that

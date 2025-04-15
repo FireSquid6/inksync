@@ -37,7 +37,8 @@ export async function makeCommit(directory: string) {
 export function writeNewTree(nodes: TreeNode[], treesDirectory: string) {
   fs.mkdirSync(treesDirectory, { recursive: true });
 
-  const index = fs.readdirSync(treesDirectory).length;
+  // TODO - find the next index
+  const index = getCurrentTreeIndex(treesDirectory) + 1;
   const filename = getTreeFilename(index);
 
   const tree: Tree = {
@@ -59,6 +60,7 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
     throw new Error(`Tried to hash ${filepath} but it does not exist`);
   }
   const compressed = Bun.gzipSync(await file.text());
+  const compressedB64 = compressed.toBase64();
   hasher.update(compressed);
 
   const hash = hasher.digest("base64url");
@@ -68,10 +70,10 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
   let blobPath = path.join(blobsDirectory, `blobs-${collisionIndex}`, hash);
   
   while (fs.existsSync(blobPath)) {
-    const text = fs.readFileSync(blobPath);
+    const b64 = fs.readFileSync(blobPath).toBase64();
 
     // we already have this file compressed. Don't need to keep looking
-    if (text === compressed) {
+    if (b64 === compressedB64) {
       return blobPath;
     }
 
@@ -238,3 +240,27 @@ export function getTreeFilename(index: number) {
   return `tree-${index}.json`;
 }
 
+
+export function getCurrentTreeIndex(treesDirectory: string): number {
+  let index = 0;
+
+  const filenames = fs.readdirSync(treesDirectory);
+
+  for (const filename of filenames) {
+    try {
+      const extensionSplit = filename.split(".");
+      const numberSplit = extensionSplit[0].split("-")
+
+      const number = parseInt(numberSplit[1]);
+      if (number > index) {
+        index = number;
+      }
+    } catch (e) {
+      throw new Error(`Error finding the index of the current tree when reading filename ${filename}`);
+    }
+
+  }
+
+
+  return index;
+}
