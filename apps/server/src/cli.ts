@@ -8,7 +8,13 @@ program
   .description("Runs a test commit to ensure that everything is working properly")
   .action(() => {
     const directory = process.cwd();
-    makeCommit(directory);
+    try {
+      makeCommit(directory);
+    } catch (e) {
+      console.log("Error:");
+      console.log(e);
+    }
+
   });
 
 program

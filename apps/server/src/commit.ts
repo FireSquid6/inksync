@@ -1,23 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { BLOBS_DIRECTORY_NAME, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, TREES_DIRECTORY_NAME } from "./constants";
-import { z } from "zod";
-
-
-export const treeNodeSchema = z.object({
-  filepath: z.string(),
-  blobPath: z.string(),
-});
-
-export type TreeNode = z.infer<typeof treeNodeSchema>;
-
-export const treeSchema = z.object({
-  index: z.number(),
-  nodes: z.array(treeNodeSchema),
-  newBlobs: z.array(z.string()),
-});
-
-export type Tree = z.infer<typeof treeSchema>;
+import type { Tree, TreeNode } from "./index";
 
 
 // TODO - track the "new" blob
@@ -35,7 +19,7 @@ export async function makeCommit(directory: string) {
   fs.mkdirSync(blobsDirectory, { recursive: true });
   fs.mkdirSync(treesDirectory, { recursive: true });
 
-  const [tree, newBlobs] = await makeNewTree(filepaths, blobsDirectory);
+  const [tree, newBlobs] = await makeNewTree(filepaths, directory);
 
   writeNewTree(tree, newBlobs, treesDirectory);
 }
@@ -95,15 +79,16 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
   fs.writeFileSync(blobPath, compressed);
 
   return {
-    blobPath,
+    blobPath: getRelativePath(blobPath, blobsDirectory),
     isNew: true,
   };
 }
 
 
 
-export async function makeNewTree(filepaths: string[], blobsDirectory: string): Promise<[TreeNode[], string[]]> {
+export async function makeNewTree(filepaths: string[], rootDirectory: string): Promise<[TreeNode[], string[]]> {
   const newPaths: string[] = [];
+  const blobsDirectory = path.join(rootDirectory, INKSYNC_DIRECTORY_NAME, BLOBS_DIRECTORY_NAME);
   const treeNodes = await Promise.all(filepaths.map(async (filepath): Promise<TreeNode> => {
     const result = await getBlobPath(filepath, blobsDirectory);
 
@@ -111,7 +96,7 @@ export async function makeNewTree(filepaths: string[], blobsDirectory: string): 
       newPaths.push(result.blobPath);
     }
     return {
-      filepath,
+      filepath: getRelativePath(filepath, rootDirectory),
       blobPath: result.blobPath,
     }
   }));
