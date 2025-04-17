@@ -36,7 +36,8 @@ export function restoreTree(rootDirectory: string, tree: Tree): void {
 }
 
 
-
+// TODO - only overwrite the file if it needs to be
+// Probably need to keep track of some sort of head pointer
 export async function restoreNode(rootDirectory: string, node: TreeNode) {
   const fullPath = path.join(rootDirectory, node.filepath);
   if (node.blobPath === DELETED_BLOB_PATH) {

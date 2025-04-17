@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { makeCommit } from "./commit";
+import { restoreTreeIndex } from "./restore";
 
 const program = new Command();
 
@@ -16,6 +17,21 @@ program
     }
 
   });
+
+program
+  .command("pop-tree")
+  .description("pops a tree at the specified index")
+  .argument("treeIndex", "the index to pop the tree at")
+  .action((treeIndex) => {
+    if (typeof treeIndex !== "string") {
+      throw new Error("Expected treeIndex to be a string");
+    }
+
+    const index = parseInt(treeIndex);
+    const directory = process.cwd();
+
+    restoreTreeIndex(index, directory);
+  })
 
 program
   .command("start")
