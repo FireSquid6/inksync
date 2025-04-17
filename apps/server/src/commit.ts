@@ -1,18 +1,26 @@
 import fs from "fs";
 import path from "path";
 import { BLOBS_DIRECTORY_NAME, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, TREES_DIRECTORY_NAME } from "./constants";
-
-export interface Tree {
-  index: number;
-  nodes: TreeNode[];
-}
-
-export interface TreeNode {
-  filepath: string;
-  blobPath: string;
-}
+import { z } from "zod";
 
 
+export const treeNodeSchema = z.object({
+  filepath: z.string(),
+  blobPath: z.string(),
+});
+
+export type TreeNode = z.infer<typeof treeNodeSchema>;
+
+export const treeSchema = z.object({
+  index: z.number(),
+  nodes: z.array(treeNodeSchema),
+  newBlobs: z.array(z.string()),
+});
+
+export type Tree = z.infer<typeof treeSchema>;
+
+
+// TODO - track the "new" blob
 export async function makeCommit(directory: string) {
   const ignoreFile = path.join(directory, IGNOREFILE_NAME);
   const ignorePaths = fs.existsSync(ignoreFile) ? getIgnorePaths(ignoreFile) : [];
@@ -27,14 +35,12 @@ export async function makeCommit(directory: string) {
   fs.mkdirSync(blobsDirectory, { recursive: true });
   fs.mkdirSync(treesDirectory, { recursive: true });
 
-  const tree = await makeNewTree(filepaths, blobsDirectory);
+  const [tree, newBlobs] = await makeNewTree(filepaths, blobsDirectory);
 
-  writeNewTree(tree, treesDirectory);
+  writeNewTree(tree, newBlobs, treesDirectory);
 }
 
-
-
-export function writeNewTree(nodes: TreeNode[], treesDirectory: string) {
+export function writeNewTree(nodes: TreeNode[], newBlobs: string[], treesDirectory: string) {
   fs.mkdirSync(treesDirectory, { recursive: true });
 
   // TODO - find the next index
@@ -44,6 +50,7 @@ export function writeNewTree(nodes: TreeNode[], treesDirectory: string) {
   const tree: Tree = {
     index: index,
     nodes: nodes,
+    newBlobs: newBlobs,
   }
 
   const data = JSON.stringify(tree);
@@ -52,7 +59,7 @@ export function writeNewTree(nodes: TreeNode[], treesDirectory: string) {
   fs.writeFileSync(filepath, data);
 }
 
-export async function getBlobPath(filepath: string, blobsDirectory: string): Promise<string> {
+export async function getBlobPath(filepath: string, blobsDirectory: string): Promise<{ blobPath: string, isNew: boolean }> {
   const hasher = new Bun.CryptoHasher("sha256");
   const file = Bun.file(filepath);
 
@@ -74,7 +81,10 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
 
     // we already have this file compressed. Don't need to keep looking
     if (b64 === compressedB64) {
-      return blobPath;
+      return {
+        blobPath,
+        isNew: false,
+      }
     }
 
     collisionIndex += 1;
@@ -84,18 +94,29 @@ export async function getBlobPath(filepath: string, blobsDirectory: string): Pro
   fs.mkdirSync(path.dirname(blobPath), { recursive: true });
   fs.writeFileSync(blobPath, compressed);
 
-  return blobPath;
+  return {
+    blobPath,
+    isNew: true,
+  };
 }
 
 
 
-export async function makeNewTree(filepaths: string[], blobsDirectory: string): Promise<TreeNode[]> {
-  return Promise.all(filepaths.map(async (filepath): Promise<TreeNode> => {
+export async function makeNewTree(filepaths: string[], blobsDirectory: string): Promise<[TreeNode[], string[]]> {
+  const newPaths: string[] = [];
+  const treeNodes = await Promise.all(filepaths.map(async (filepath): Promise<TreeNode> => {
+    const result = await getBlobPath(filepath, blobsDirectory);
+
+    if (result.isNew) {
+      newPaths.push(result.blobPath);
+    }
     return {
       filepath,
-      blobPath: await getBlobPath(filepath, blobsDirectory),
+      blobPath: result.blobPath,
     }
   }));
+
+  return [treeNodes, newPaths];
 }
 
 export function getFilepathsInDirectory(rootDirectory: string, ignorePaths: string[], ignoreRelativeTo?: string): string[] {
