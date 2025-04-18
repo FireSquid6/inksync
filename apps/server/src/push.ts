@@ -26,7 +26,8 @@ export function readTree(treeDirectory: string, index: number): Tree | null {
     return null;
   }
   
-  return treeSchema.parse(fs.readFileSync(filepath).toString());
+  const text = fs.readFileSync(filepath).toString();
+  return treeSchema.parse(JSON.parse(text));
 }
 
 export function restoreTree(rootDirectory: string, tree: Tree): void {
@@ -39,6 +40,7 @@ export function restoreTree(rootDirectory: string, tree: Tree): void {
 // TODO - only overwrite the file if it needs to be
 // Probably need to keep track of some sort of head pointer
 export async function restoreNode(rootDirectory: string, node: TreeNode) {
+
   const fullPath = path.join(rootDirectory, node.filepath);
   if (node.blobPath === DELETED_BLOB_PATH) {
     if (fs.existsSync(fullPath)) {
@@ -47,8 +49,9 @@ export async function restoreNode(rootDirectory: string, node: TreeNode) {
 
     return;
   }
-
   const blobPath = path.join(rootDirectory, INKSYNC_DIRECTORY_NAME, BLOBS_DIRECTORY_NAME, node.blobPath);
+  console.log(`Popping path ${blobPath} -> ${fullPath}`)
+
   const blobFile = Bun.file(blobPath);
   const uncompressed = Bun.gunzipSync(await blobFile.text());
   
