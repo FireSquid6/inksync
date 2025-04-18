@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Elysia, t } from "elysia";
 import { failingTracker, getDirectoryTracker } from "./track";
 import { defaultConfig } from "./config";
+import { authenticateSchema, makeMessage, parseMessage } from "inksync-sdk";
 import { tokenIsValid } from "./auth";
 
 export const trackedFileSchema = z.object({
@@ -20,20 +21,65 @@ export type Trackerfile = z.infer<typeof trackerFileSchema>;
 
 const CHANNEL_NAME = "MESSAGES";
 
-// TODO when back:
-// - write a client that can join the websocket
-// - define message types
 export const app = new Elysia()
   .state("tracker", failingTracker())
   .state("config", defaultConfig())
-  .state("authenticatedSocketIds", [] as string[])
+  .state("authenticatedSocketIds", new Set<string>())
   .ws("listen", {
     body: t.Object({
       message: t.String(),
     }),
-    message: (ws, { message }) => {
-      console.log(`Got ${message} from websocket`);
-      ws.publish(CHANNEL_NAME, message)
+    message: (ws, { message: rawMessage }) => {
+      const { authenticatedSocketIds, tracker } = ws.data.store;
+      const id = ws.id;
+      const message = parseMessage(rawMessage);
+      if (message instanceof Error) {
+        ws.send(makeMessage({
+          type: "ERROR",
+          info: message.message,
+        }));
+        return;
+      }
+
+      if (!authenticatedSocketIds.has(id) && message.type !== "AUTHENTICATE") {
+        ws.send(makeMessage({
+          type: "ERROR",
+          info: "Not authenticated",
+        }));
+      }
+
+      switch (message.type) {
+        case "AUTHENTICATE":
+          if (tokenIsValid(message.token)) {
+            authenticatedSocketIds.add(message.token);
+            ws.subscribe(CHANNEL_NAME);
+            ws.send(makeMessage({
+              type: "AUTHENTICATED",
+            }));
+
+          } else {
+            ws.send(makeMessage({
+              type: "ERROR",
+              info: "Token was unable to be validated",
+            }));
+          }
+          break;
+        case "PUSH_UPDATES":
+          // TODO
+
+
+          break;
+        case "FETCH_UPDATED_SINCE":
+          // TODO
+
+          break;
+        default:
+          ws.send(makeMessage({
+            type: "ERROR",
+            info: `Message of type ${message.type} shouldn't be sent to the sever`,
+          }));
+      }
+
     },
   })
   .post("update", async (ctx) => {

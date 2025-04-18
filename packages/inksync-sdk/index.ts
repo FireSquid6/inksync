@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Base message schema with type discriminator
 export const baseMessageSchema = z.object({
-  type: z.enum(["AUTHENTICATE", "UPDATED", "PUSH_UPDATE", "FETCH_UPDATED_SINCE"]),
+  type: z.enum(["AUTHENTICATE", "UPDATE_SUCCESSFUL", "OUTDATED", "AUTHENTICATED", "UPDATED", "PUSH_UPDATES", "FETCH_UPDATED_SINCE", "ERROR"]),
 });
 
 // Individual message schemas
@@ -11,38 +11,60 @@ export const authenticateSchema = baseMessageSchema.extend({
   token: z.string(),
 });
 
+export const updateSuccessfulSchema = baseMessageSchema.extend({
+  type: z.literal("UPDATE_SUCCESSFUL"),
+})
+
+export const authenticatedSchema = baseMessageSchema.extend({
+  type: z.literal("AUTHENTICATED"),
+})
+
 export const updatedSchema = baseMessageSchema.extend({
   type: z.literal("UPDATED"),
-  filepath: z.string(),
-  content: z.string(),
-  timestamp: z.number(), // Unix timestamp
+  updates: z.array(z.object({
+    filepath: z.string(),
+    content: z.string(),
+  })),
+  timestamp: z.number(), 
 });
 
-export const pushUpdateSchema = baseMessageSchema.extend({
-  type: z.literal("PUSH_UPDATE"),
-  filepath: z.string(),
-  content: z.string(), // Could be more specific like z.instanceof(Buffer) depending on requirements
+export const pushUpdatesSchema = baseMessageSchema.extend({
+  type: z.literal("PUSH_UPDATES"),
+  updates: z.array(z.object({
+    filepath: z.string(),
+    content: z.string(), 
+  })),
+  lastUpdate: z.number(),
 });
+
+export const outdatedSchema = baseMessageSchema.extend({
+  type: z.literal("OUTDATED"),
+})
 
 export const fetchUpdatedSinceSchema = baseMessageSchema.extend({
   type: z.literal("FETCH_UPDATED_SINCE"),
   timestamp: z.number(), // Unix timestamp
 });
 
+export const errorSchema = baseMessageSchema.extend({
+  type: z.literal("ERROR"),
+  info: z.string(),
+});
+
 // Discriminated union of all message types
 export const messageSchema = z.discriminatedUnion("type", [
   authenticateSchema,
+  authenticatedSchema,
   updatedSchema,
-  pushUpdateSchema,
+  pushUpdatesSchema,
   fetchUpdatedSinceSchema,
+  errorSchema,
+  outdatedSchema,
+  updateSuccessfulSchema,
 ]);
 
 // Type inference from the schema
 export type Message = z.infer<typeof messageSchema>;
-export type AuthenticateMessage = z.infer<typeof authenticateSchema>;
-export type UpdatedMessage = z.infer<typeof updatedSchema>;
-export type PushUpdateMessage = z.infer<typeof pushUpdateSchema>;
-export type FetchUpdatedSinceMessage = z.infer<typeof fetchUpdatedSinceSchema>;
 
 export function parseMessage(message: string): Message | Error {
   try {
@@ -51,4 +73,9 @@ export function parseMessage(message: string): Message | Error {
   } catch (e) {
     return e as Error;
   }
+}
+
+// helper function for type safety
+export function makeMessage(message: Message): string {
+  return JSON.stringify(message);
 }
