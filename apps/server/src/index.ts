@@ -5,7 +5,7 @@ import { defaultConfig } from "./config";
 
 export const trackedFileSchema = z.object({
   filepath: z.string(),
-  lastUpdated: z.number(),
+  last_updated: z.number(),
 });
 
 

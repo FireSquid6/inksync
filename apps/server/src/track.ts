@@ -35,8 +35,8 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
 
   db.query(`CREATE TABLE IF NOT EXISTS ${TABLE_NAME}(filepath TEXT PRIMARY KEY, last_updated DATETIME default current_timestamp);`).run()
 
-  db.query(`INSERT INTO ${TABLE_NAME} (filepath, last_updated) VALUES ('hello.txt', 100)`).run();
-  db.query(`INSERT INTO ${TABLE_NAME} (filepath, last_updated) VALUES ('goodbye.txt', 100)`).run();
+  db.query(`INSERT OR REPLACE INTO ${TABLE_NAME} (filepath, last_updated) VALUES ('hello.txt', 100)`).run();
+  db.query(`INSERT OR REPLACE INTO ${TABLE_NAME} (filepath, last_updated) VALUES ('goodbye.txt', 100)`).run();
 
   return {
     async getPathsUpdatedSince(time: number) {
