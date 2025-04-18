@@ -79,8 +79,11 @@ export const app = new Elysia()
             info: `Message of type ${message.type} shouldn't be sent to the sever`,
           }));
       }
-
     },
+    close: (ws) => {
+      const { authenticatedSocketIds } = ws.data.store;
+      authenticatedSocketIds.delete(ws.id);
+    }
   })
   .post("update", async (ctx) => {
     const { filepath, compressed } = ctx.body;
@@ -110,7 +113,7 @@ export const app = new Elysia()
 
 export function startApp(directory: string) {
   app.store.tracker = getDirectoryTracker(directory);
-  
+
   const port = app.store.config.port;
 
   app.listen(port, () => {
