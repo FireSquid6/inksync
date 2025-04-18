@@ -1,37 +1,17 @@
 import { Command } from "commander";
-import { makeCommit } from "./commit";
-import { restoreTreeIndex } from "./restore";
+import { getDirectoryTracker } from "./track";
 
 const program = new Command();
 
 program
-  .command("test-commit")
-  .description("Runs a test commit to ensure that everything is working properly")
+  .command("test")
+  .description("Runs a test thingy")
   .action(() => {
     const directory = process.cwd();
-    try {
-      makeCommit(directory);
-    } catch (e) {
-      console.log("Error:");
-      console.log(e);
-    }
+    const tracker = getDirectoryTracker(directory);
 
+    tracker.getPathsUpdatedSince(0);
   });
-
-program
-  .command("pop-tree")
-  .description("pops a tree at the specified index")
-  .argument("treeIndex", "the index to pop the tree at")
-  .action((treeIndex) => {
-    if (typeof treeIndex !== "string") {
-      throw new Error("Expected treeIndex to be a string");
-    }
-
-    const index = parseInt(treeIndex);
-    const directory = process.cwd();
-
-    restoreTreeIndex(index, directory);
-  })
 
 program
   .command("start")
