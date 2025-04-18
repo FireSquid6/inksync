@@ -3,8 +3,7 @@ import YAML from "yaml";
 import fs from "fs";
 
 export const configSchema = z.object({
-  storeDirectory: z.string(),
-  filesystemSources: z.array(z.string()),
+  port: z.number(),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -16,3 +15,9 @@ export function readConfigFromFile(filepath: string): Config {
   return configSchema.parse(data);
 }
 
+
+export function defaultConfig(): Config {
+  return {
+    port: 3240,
+  }
+}

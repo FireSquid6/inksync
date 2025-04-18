@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { getDirectoryTracker } from "./track";
+import { startApp } from ".";
 
 const program = new Command();
 
@@ -17,7 +18,8 @@ program
   .command("start")
   .description("Starts the server")
   .action(() => {
-    console.log("starting the server!");
+    const directory = process.cwd();
+    startApp(directory);
   });
 
 

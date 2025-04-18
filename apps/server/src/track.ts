@@ -11,6 +11,22 @@ export interface Tracker {
   getCurrentContent(filepath: string): Promise<string | null>;
 }
 
+// only used for the start. Forces you to actually
+// make a new tracker for the server to use 
+export function failingTracker(): Tracker {
+  return {
+    getPathsUpdatedSince(_: number): Promise<string[]> {
+      throw new Error("Forgot to assign tracker");
+    },
+    pushUpdate(_1: string, _2: string): Promise<void> {
+      throw new Error("Forgot to assign tracker");
+    },
+    getCurrentContent(_: string): Promise<string | null> {
+      throw new Error("Forgot to assign tracker");
+    },
+  }
+}
+
 
 export function getDirectoryTracker(rootDirectory: string): Tracker {
   const filepath = getTrackerfilepath(rootDirectory);
@@ -60,42 +76,6 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
   }
 }
 
-
-
-export function pushUpdate(rootDirectory: string, relativePath: string, newContent: string) {
-  const filepath = path.join(rootDirectory, relativePath);
-
-  updateTrackerfile(rootDirectory, [relativePath]);
-  fs.writeFileSync(filepath, newContent);
-}
-
-// TOOD - use an sqlite database for the trackerfile
-function updateTrackerfile(rootDirectory: string, relativePaths: string[]) {
-  const fp = getTrackerfilepath(rootDirectory);
-  const tf = getTrackerfile(rootDirectory);
-
-  for (const p of relativePaths) {
-    const i = tf.findIndex((v) => v.filepath === p);
-
-    if (i === -1) {
-      tf.push({
-        filepath: p,
-        lastUpdated: Date.now(),
-      });
-    }
-
-    tf[i].lastUpdated = Date.now();
-  }
-
-}
-
-export function getTrackerfile(rootDirectory: string): Trackerfile {
-  const fp = getTrackerfilepath(rootDirectory);
-  const contents = JSON.parse(fs.readFileSync(fp).toString());
-
-  const trackerfile = trackerFileSchema.parse(contents);
-  return trackerfile;
-}
 
 function getTrackerfilepath(rootDirectory: string) {
   const filepath = path.join(rootDirectory, INKSYNC_DIRECTORY_NAME, TRACKERFILE_NAME);
