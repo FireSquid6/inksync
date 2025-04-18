@@ -26,38 +26,14 @@ const CHANNEL_NAME = "MESSAGES";
 export const app = new Elysia()
   .state("tracker", failingTracker())
   .state("config", defaultConfig())
+  .state("authenticatedSocketIds", [] as string[])
   .ws("listen", {
     body: t.Object({
       message: t.String(),
     }),
-    headers: t.Object({
-      token: t.Optional(t.String()),
-    }),
     message: (ws, { message }) => {
       console.log(`Got ${message} from websocket`);
       ws.publish(CHANNEL_NAME, message)
-    },
-    open: (ws) => {
-      const { token } = ws.data.headers;
-
-      if (!token) {
-        console.log ("No token in headers. Closing");
-        ws.close();
-        return;
-      }
-
-      if (!tokenIsValid(token)) {
-        console.log(`Token ${token} is not valid`);
-        ws.close();
-        return;
-      }
-
-      ws.subscribe(CHANNEL_NAME);
-    },
-    close: (ws) => {
-      if (ws.isSubscribed(CHANNEL_NAME)) {
-        ws.unsubscribe(CHANNEL_NAME);
-      }
     },
   })
   .post("update", async (ctx) => {

@@ -22,6 +22,18 @@ program
     startApp(directory);
   });
 
+program
+  .command("connect")
+  .description("Connects to a provided server as a client")
+  .argument("<address>", "The address of the server")
+  .action((address) => {
+    if (typeof address !== "string") {
+      throw new Error(`Address was ${address} (${typeof address}) and not a string`);
+    }
+
+    const socket = new WebSocket(`ws://${address}/listen`);
+  });
+
 
 export async function runCli() {
   await program.parseAsync();
