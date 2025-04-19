@@ -1,5 +1,5 @@
 {
-  "name": "libinksync",
+  "name": "inksync-sdk",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
