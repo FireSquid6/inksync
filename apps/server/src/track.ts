@@ -1,27 +1,40 @@
 import path from "path";
 import fs from "fs";
 import { INKSYNC_DIRECTORY_NAME, TABLE_NAME, TRACKERFILE_NAME } from "./constants";
-import { trackerFileSchema, type Trackerfile } from ".";
 import { Database } from "bun:sqlite";
+import { z } from "zod";
+
+export const trackedFileSchema = z.object({
+  filepath: z.string(),
+  last_updated: z.number(),
+});
+
+export type TrackedFile = z.infer<typeof trackedFileSchema>
+export const trackerFileSchema = z.array(trackedFileSchema);
+export type Trackerfile = z.infer<typeof trackerFileSchema>;
 
 // TODO - use compressed files and don't load the whole thing into memory?
 export interface Tracker {
-  getPathsUpdatedSince(time: number): Promise<string[]>;
+  getPathsUpdatedSince(time: number): Promise<Trackerfile>;
   pushUpdate(filepath: string, contents: string): Promise<void>;
   getCurrentContent(filepath: string): Promise<string | null>;
+  getLastUpdate(filepath: string): Promise<number | null>;
 }
 
 // only used for the start. Forces you to actually
 // make a new tracker for the server to use 
 export function failingTracker(): Tracker {
   return {
-    getPathsUpdatedSince(_: number): Promise<string[]> {
+    getPathsUpdatedSince(_: number) {
       throw new Error("Forgot to assign tracker");
     },
     pushUpdate(_1: string, _2: string): Promise<void> {
       throw new Error("Forgot to assign tracker");
     },
     getCurrentContent(_: string): Promise<string | null> {
+      throw new Error("Forgot to assign tracker");
+    },
+    getLastUpdate(_: string): Promise<number | null> {
       throw new Error("Forgot to assign tracker");
     },
   }
@@ -43,7 +56,7 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
       const result = db.query(`SELECT filepath, last_updated FROM ${TABLE_NAME} WHERE last_updated > ${time}`).all();
 
       const trackerfile = trackerFileSchema.parse(result);
-      return trackerfile.map((t) => t.filepath);
+      return trackerfile;
     },
     async pushUpdate(relativePath: string, contents: string): Promise<void> {
       const filepath = path.join(rootDirectory, relativePath);
@@ -72,6 +85,15 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
       }
 
       return null;
+    },
+    async getLastUpdate(filepath: string): Promise<number | null> {
+      const result = db.query(`SELECT filepath, last_updated FROM ${TABLE_NAME} WHERE filepath = ${filepath}`).all();
+      const trackerfile = trackerFileSchema.parse(result);
+
+      if (trackerfile.length !== 1) {
+        return null;
+      }
+      return trackerfile[0].last_updated;
     },
   }
 }

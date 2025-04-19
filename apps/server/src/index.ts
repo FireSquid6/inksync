@@ -1,23 +1,9 @@
-import { z } from "zod";
 import { Elysia, t } from "elysia";
 import { failingTracker, getDirectoryTracker } from "./track";
 import { defaultConfig } from "./config";
-import { authenticateSchema, makeMessage, parseMessage } from "inksync-sdk";
+import { makeMessage, parseMessage, type Update } from "inksync-sdk";
+import { compressFile, decompressFile } from "inksync-sdk/compress";
 import { tokenIsValid } from "./auth";
-
-export const trackedFileSchema = z.object({
-  filepath: z.string(),
-  last_updated: z.number(),
-});
-
-
-export type TrackedFile = z.infer<typeof trackedFileSchema>
-
-export const trackerFileSchema = z.array(trackedFileSchema);
-
-export type Trackerfile = z.infer<typeof trackerFileSchema>;
-
-
 
 const CHANNEL_NAME = "MESSAGES";
 
@@ -29,7 +15,7 @@ export const app = new Elysia()
     body: t.Object({
       message: t.String(),
     }),
-    message: (ws, { message: rawMessage }) => {
+    message: async (ws, { message: rawMessage }) => {
       const { authenticatedSocketIds, tracker } = ws.data.store;
       const id = ws.id;
       const message = parseMessage(rawMessage);
@@ -65,12 +51,66 @@ export const app = new Elysia()
           }
           break;
         case "PUSH_UPDATES":
-          // TODO
+          // first ensure that all updates are in date
+          for (const update of message.updates) {
+            const lastUpdated = await tracker.getLastUpdate(update.filepath);
 
+            if (lastUpdated !== null && lastUpdated >= update.lastUpdate) {
+              ws.send(makeMessage({
+                type: "OUTDATED",
+                filepath: update.filepath,
+              }));
+              return;
+            }
+          }
+
+
+          await Promise.all(message.updates.map(async (u) => {
+            const decompressed = decompressFile(u.content)
+            await tracker.pushUpdate(u.filepath, decompressed);
+
+            return Promise.resolve();
+          }));
+
+
+          ws.send(makeMessage({
+            type: "UPDATE_SUCCESSFUL",
+          }))
+
+          ws.publish(CHANNEL_NAME, makeMessage({
+            type: "UPDATED",
+            updates: message.updates.map((u) => {
+              return {
+                filepath: u.filepath,
+                content: u.content,
+                lastUpdate: Date.now(),
+              }
+            }),
+          }))
 
           break;
         case "FETCH_UPDATED_SINCE":
-          // TODO
+          const trackerfile = await tracker.getPathsUpdatedSince(message.timestamp);
+
+          const updates = await Promise.all(trackerfile.map(async (t): Promise<Update> => {
+            const content = await tracker.getCurrentContent(t.filepath);
+
+            if (content === null) {
+              throw new Error("Somehow failed to get content for a file that is supposed to exist");
+            }
+
+            const compressed = await compressFile(content);
+            return {
+              filepath: t.filepath,
+              lastUpdate: t.last_updated,
+              content: compressed,
+            }
+          }));
+
+          ws.send({
+            type: "UPDATED",
+            updates,
+          })
 
           break;
         default:
@@ -84,30 +124,6 @@ export const app = new Elysia()
       const { authenticatedSocketIds } = ws.data.store;
       authenticatedSocketIds.delete(ws.id);
     }
-  })
-  .post("update", async (ctx) => {
-    const { filepath, compressed } = ctx.body;
-    const { tracker } = ctx.store;
-
-    const contents = Bun.gunzipSync(compressed).toString();
-    await tracker.pushUpdate(filepath, contents);
-
-    ctx.set.status = 201;
-  }, {
-    body: t.Object({
-      filepath: t.String(),
-      compressed: t.String(),
-    }),
-  })
-  .post("changes-since", async (ctx) => {
-    const { tracker } = ctx.store;
-    const updatedPaths = await tracker.getPathsUpdatedSince(ctx.body.time);
-
-    return updatedPaths;
-  }, {
-    body: t.Object({
-      time: t.Number(),
-    }),
   })
 
 

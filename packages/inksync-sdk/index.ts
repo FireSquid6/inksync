@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const updateSchema = z.object({
+  filepath: z.string(),
+  content: z.string(),
+  lastUpdate: z.number(),
+});
+
+export type Update = z.infer<typeof updateSchema>;
+
 // Base message schema with type discriminator
 export const baseMessageSchema = z.object({
   type: z.enum(["AUTHENTICATE", "UPDATE_SUCCESSFUL", "OUTDATED", "AUTHENTICATED", "UPDATED", "PUSH_UPDATES", "FETCH_UPDATED_SINCE", "ERROR"]),
@@ -21,29 +29,22 @@ export const authenticatedSchema = baseMessageSchema.extend({
 
 export const updatedSchema = baseMessageSchema.extend({
   type: z.literal("UPDATED"),
-  updates: z.array(z.object({
-    filepath: z.string(),
-    content: z.string(),
-  })),
-  timestamp: z.number(), 
+  updates: z.array(updateSchema),
 });
 
 export const pushUpdatesSchema = baseMessageSchema.extend({
   type: z.literal("PUSH_UPDATES"),
-  updates: z.array(z.object({
-    filepath: z.string(),
-    content: z.string(), 
-  })),
-  lastUpdate: z.number(),
+  updates: z.array(updateSchema),
 });
 
 export const outdatedSchema = baseMessageSchema.extend({
   type: z.literal("OUTDATED"),
+  filepath: z.string(),
 })
 
 export const fetchUpdatedSinceSchema = baseMessageSchema.extend({
   type: z.literal("FETCH_UPDATED_SINCE"),
-  timestamp: z.number(), // Unix timestamp
+  timestamp: z.number(),
 });
 
 export const errorSchema = baseMessageSchema.extend({
