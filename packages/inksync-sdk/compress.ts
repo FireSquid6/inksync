@@ -1,7 +1,7 @@
 
 
 export async function compressFile(content: string): Promise<string> {
-  const data = Bun.gzipSync(await file.text()).toString();
+  const data = Bun.gzipSync(content).toString();
   const b64 = atob(data);
   return b64;
 }
