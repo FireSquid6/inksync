@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { failingTracker, getDirectoryTracker } from "./track";
+import { failingTracker, getDirectoryTracker } from "./tracker";
 import { defaultConfig } from "./config";
 import { makeMessage, parseMessage, type Update } from "inksync-sdk";
 import { compressFile, decompressFile } from "inksync-sdk/compress";

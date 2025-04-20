@@ -9,7 +9,7 @@ export class InksyncClient {
   constructor(address: string) {
     this.socket = new WebSocket(`ws://${address}/listen`);
 
-    this.socket.onmessage = (e: Bun.BunMessageEvent<string>) => {
+    this.socket.onmessage = (e) => {
       const message = parseMessage(e.data);
 
       if (message instanceof Error) {
@@ -17,6 +17,14 @@ export class InksyncClient {
       }
 
       this.handleMessage(message)
+    }
+
+    this.socket.onclose = () => {
+      console.log("Socket closed");
+    }
+
+    this.socket.onerror = (e) => {
+      throw new Error(`Websocket error: ${e}`);
     }
   }
 

@@ -1,6 +1,7 @@
 import { Command } from "commander";
-import { getDirectoryTracker } from "./track";
-import { startApp } from ".";
+import { getDirectoryTracker } from "inksync-sdk/server/tracker";
+import { startApp } from "inksync-sdk/server";
+import { InksyncClient } from "inksync-sdk/client";
 
 const program = new Command();
 
@@ -28,10 +29,14 @@ program
   .argument("<address>", "The address of the server")
   .action((address) => {
     if (typeof address !== "string") {
-      throw new Error(`Address was ${address} (${typeof address}) and not a string`);
+      throw new Error("Got bad type for address. Should be string");
     }
 
-    const socket = new WebSocket(`ws://${address}/listen`);
+    const client = new InksyncClient(address);
+    client.onMessage((m) => {
+      console.log("Got message:");
+      console.log(m);
+    })
   });
 
 

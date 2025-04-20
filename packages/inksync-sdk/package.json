@@ -7,5 +7,10 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "elysia": "^1.2.25",
+    "yaml": "^2.7.1",
+    "zod": "^3.24.2"
   }
 }
