@@ -2,7 +2,7 @@ import { makeMessage, parseMessage, type Message } from "..";
 
 type MessageHandler = (message: Message) => void;
 
-export class InksyncClient {
+export class InksyncConnection {
   private socket: WebSocket;
   private listeners: MessageHandler[] = [];
 
