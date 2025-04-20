@@ -5,16 +5,21 @@ import { Database } from "bun:sqlite";
 import { DELETED_CONTENT, INKSYNC_DIRECTORY_NAME, STORE_NAME, STORE_TABLE_NAME } from "../server/constants";
 import type { Update } from "..";
 import { z } from "zod";
+import { compressFile, decompressFile } from "../compress";
+import type { Config } from "../server/config";
 
 export interface Conflict {
   filepath: string;
   conflictFilepath: string;
 }
 
-export interface ClientUpdate {
-  filepath: string;
-  hash: string;
-}
+export const clientUpdateSchema = z.object({
+  filepath: z.string(),
+  hash: z.string(),
+  last_updated: z.number(),
+});
+
+export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
 
 
 export class ClientStore {
@@ -29,7 +34,7 @@ export class ClientStore {
     this.db = new Database(path.join(inksyncDirectory, STORE_NAME));
     this.connection = connection;
 
-    this.db.query(`CREATE TABLE IF NOT EXISTS ${STORE_TABLE_NAME}(filepath TEXT PRIMARY KEY, hash TEXT, last_updated DATETIME default current_timestamp);`).run()
+    this.db.query(`CREATE TABLE IF NOT EXISTS ${STORE_TABLE_NAME}(filepath TEXT PRIMARY KEY, hash TEXT, last_updated DATETIME default current_timestamp);`).all()
 
   }
 
@@ -40,18 +45,74 @@ export class ClientStore {
       // output conflict messages
     }
 
-    this.pushCurrentUpdate();
+    await this.pushCurrentUpdate();
+    console.log("Successfully synced with the server")
   }
 
+  // TODO
   async syncSpecificFile(filepath: string) {
+
 
   }
 
   private async pullUpdates(): Promise<Conflict[]> {
-    return [];
+    const row = this.db.query(`SELETCT * FROM ${STORE_TABLE_NAME} ORDER BY last_updated ASC LIMIT 1`).all();
+    const oldestUpdate = z.array(clientUpdateSchema).parse(row)[0];
+    const conflicts: Conflict[] = [];
+
+    const requestTime = oldestUpdate?.last_updated ?? 0;
+
+    const updateMessage = await this.connection.sendAndRecieve({
+      type: "FETCH_UPDATED_SINCE",
+      timestamp: requestTime,
+    });
+
+
+    switch (updateMessage.type) {
+      case "UPDATED":
+        for (const update of updateMessage.updates) {
+          const conflict = this.applyUpdate(update);
+
+          if (conflict !== null) {
+            conflicts.push(conflict);
+          }
+        }
+        break;
+      case "ERROR":
+        throw new Error(`Error fetching updates since ${requestTime}: ${updateMessage.info}`)
+      default:
+        throw new Error(`Got ${updateMessage.type} response from a pull`);
+    }
+
+    return conflicts;
   }
 
-  private async pushCurrentUpdate(): Promise<"SUCCESS" | Error> {
+  // TODO - check for aand handle conflicts
+  private applyUpdate(update: Update): Conflict | null {
+    // update the file
+    const filepath = path.join(this.rootDirectory, update.filepath);
+    const decompressed = decompressFile(update.content);
+    const dirname = path.dirname(filepath);
+
+    const hash = hashText(decompressed);
+
+    fs.mkdirSync(dirname, { recursive: true });
+    fs.writeFileSync(filepath, decompressed);
+
+    // update the database
+    const result = this.db.query(`
+      INSERT OR REPLACE INTO ${STORE_TABLE_NAME} (filepath, hash, last_updated)
+      VALUES (?, ?, ?)
+    `).run(update.filepath, hash, update.lastUpdate,)
+
+    if (result.changes !== 1) {
+      throw new Error(`Tried to apply an update but made ${result.changes} changes instead of 1`);
+    }
+
+    return null;
+  }
+
+  private async pushCurrentUpdate(): Promise<void> {
     const updates = this.getStagedUpdates();
 
     const res = await this.connection.sendAndRecieve({
@@ -61,33 +122,55 @@ export class ClientStore {
 
     switch (res.type) {
       case "UPDATE_SUCCESSFUL":
-        return "SUCCESS";
+        return;
+      // big difference in throw vs handle
+      // throw is unrecoverable
       case "ERROR":
-        return new Error(`Error pushing updates: ${res.info}`);
+        throw new Error(`Error pushing updates: ${res.info}`);
+      case "OUTDATED":
+        throw new Error("Outdated. Need to sync. This is a very rare edge case.");
       default:
         throw new Error(`Recieved unexpected message ${res.type}: ${res}`);
     }
   }
 
+  // gets server updates
   private getStagedUpdates(): Update[] {
+    const updates: Update[] = [];
+    const filepaths = fs.readdirSync(this.rootDirectory);
+
+    for (const filepath of filepaths) {
+      const update = this.getUpdateForFile(filepath) 
+
+      if (update !== null) {
+        const absoluteFilepath = path.join(this.rootDirectory, filepath);
+        const content = compressFile(fs.readFileSync(absoluteFilepath).toString());
+
+        updates.push({
+          lastUpdate: update.last_updated,
+          filepath: update.filepath,
+          content,
+        });
+      }
+    }
 
     return [];
   }
 
+  // TOOD - add special trackers for dealing with large files (> 50 MB)
   private getUpdateForFile(relativePath: string): ClientUpdate | null {
     const fullPath = path.join(this.rootDirectory, relativePath);
     const newHash = getFileHash(fullPath);
 
-    const row = this.db.query(`SELECT hash FROM ${STORE_TABLE_NAME} WHERE filepath = ${relativePath}`).all();
-    const hashes = z.array(z.object({
-      hash: z.string()
-    })).parse(row);
+    const row = this.db.query(`SELECT hash, filepath, last_updated FROM ${STORE_TABLE_NAME} WHERE filepath = ${relativePath}`).all();
+    const hashes = z.array(clientUpdateSchema).parse(row);
 
 
     if (hashes.length === 0) {
       return {
         filepath: relativePath,
         hash: newHash,
+        last_updated: Date.now(),
       }
     }
 
@@ -106,6 +189,7 @@ export class ClientStore {
     return {
       filepath: relativePath,
       hash: newHash,
+      last_updated: Date.now(),
     }
 
   }
@@ -118,11 +202,15 @@ export function getFileHash(filepath: string): string {
     return DELETED_CONTENT;
   }
 
-  const text = fs.readFileSync(filepath);
+  const text = fs.readFileSync(filepath).toString();
+  return hashText(text);
+}
+
+
+function hashText(text: string): string {
   const hasher = new Bun.CryptoHasher("sha512");
 
   hasher.update(text);
   return hasher.digest().toString();
 
 }
-

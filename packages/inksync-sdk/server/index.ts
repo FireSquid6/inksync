@@ -99,7 +99,7 @@ export const app = new Elysia()
               throw new Error("Somehow failed to get content for a file that is supposed to exist");
             }
 
-            const compressed = await compressFile(content);
+            const compressed = compressFile(content);
             return {
               filepath: t.filepath,
               lastUpdate: t.last_updated,
