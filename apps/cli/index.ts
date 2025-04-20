@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { getDirectoryTracker } from "inksync-sdk/server/tracker";
 import { startApp } from "inksync-sdk/server";
 import { InksyncClient } from "inksync-sdk/client";
 
