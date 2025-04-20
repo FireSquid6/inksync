@@ -6,7 +6,6 @@ import { DELETED_CONTENT, INKSYNC_DIRECTORY_NAME, STORE_NAME, STORE_TABLE_NAME }
 import type { Update } from "..";
 import { z } from "zod";
 import { compressFile, decompressFile } from "../compress";
-import type { Config } from "../server/config";
 
 export interface Conflict {
   filepath: string;
