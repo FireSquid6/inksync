@@ -93,7 +93,7 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
       if (trackerfile.length !== 1) {
         return null;
       }
-      return trackerfile[0].last_updated;
+      return trackerfile[0]!.last_updated;
     },
   }
 }
