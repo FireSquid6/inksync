@@ -22,13 +22,38 @@ program
     }
 
     const client = new InksyncClient(address);
-    client.onMessage((m) => {
-      console.log("Got message:");
-      console.log(m);
-    })
+    interactive(client);
   });
 
+async function readLine(): Promise<string> {
+  for await (const line of console) {
+    return line;
+  }
+  return ""; // Return an empty string if no input is received
+}
+
+async function interactive(client: InksyncClient) {
+  client.onMessage((m) => {
+    console.log("Recieved message:");
+    console.log(m);
+  });
+
+  while (true) {
+    const line = await readLine();
+    switch (line) {
+      case "FETCH":
+
+        break;
+      case "PUSH":
+
+        break;
+    }
+  }
+}
 
 export async function runCli() {
   await program.parseAsync();
 }
+
+
+runCli();

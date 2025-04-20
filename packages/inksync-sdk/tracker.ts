@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs";
-import { INKSYNC_DIRECTORY_NAME, TABLE_NAME, TRACKERFILE_NAME } from "./constants";
+import { INKSYNC_DIRECTORY_NAME, TABLE_NAME, TRACKERFILE_NAME } from "./server/constants";
 import { Database } from "bun:sqlite";
 import { z } from "zod";
 

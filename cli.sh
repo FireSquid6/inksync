@@ -3,4 +3,4 @@
 
 DIRECTORY="$(dirname "$0")"
 
-bun run "$DIRECTORY/apps/server/src/main.ts" "$@"
+bun run "$DIRECTORY/apps/cli/index.ts" "$@"

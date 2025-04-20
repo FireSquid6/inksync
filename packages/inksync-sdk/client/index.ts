@@ -1,4 +1,4 @@
-import { parseMessage, type Message } from ".";
+import { makeMessage, parseMessage, type Message } from "..";
 
 type MessageHandler = (message: Message) => void;
 
@@ -40,5 +40,20 @@ export class InksyncClient {
     return () => {
       this.listeners.filter((l) => l !== listener);
     }
+  }
+
+  sendMessage(message: Message) {
+    this.socket.send(makeMessage(message));
+  }
+
+  async sendAndRecieve(message: Message): Promise<Message> {
+    return new Promise((resolve) => {
+      const unsubscribe = this.onMessage((m) => {
+        resolve(m);
+        unsubscribe();
+      });
+
+      this.socket.send(makeMessage(message));
+    })
   }
 }
