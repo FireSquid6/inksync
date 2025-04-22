@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { startApp } from "inksync-sdk/server";
+import { InksyncConnection, DirectoryStore } from "inksync-sdk/client";
 
 const program = new Command();
 
@@ -12,23 +13,18 @@ program
   });
 
 program
-  .command("connect")
-  .description("Connects to a provided server as a client")
+  .command("sync")
+  .description("Connects to a server and syncs")
   .argument("<address>", "The address of the server")
   .action((address) => {
-    if (typeof address !== "string") {
-      throw new Error("Got bad type for address. Should be string");
-    }
+    const directory = process.cwd();
+    const connection = new InksyncConnection(address);
 
-    const client = new InksyncClient(address);
+    const store = new DirectoryStore(directory, connection);
+
+    store.syncAll();
   });
 
-async function readLine(): Promise<string> {
-  for await (const line of console) {
-    return line;
-  }
-  return ""; // Return an empty string if no input is received
-}
 
 
 export async function runCli() {

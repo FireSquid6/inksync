@@ -1,8 +1,8 @@
-import { ClientStore } from "./store";
+import { DirectoryStore } from "./store";
 import { InksyncConnection } from "./connection";
 
 
 export {
-  ClientStore,
+  DirectoryStore,
   InksyncConnection,
 }

@@ -6,7 +6,7 @@ import { DELETED_CONTENT, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, STORE_NAME, S
 import type { Update } from "..";
 import { z } from "zod";
 import { compressFile, decompressFile } from "../compress";
-import { getIgnorePaths, isIgnored, readDirectoryRecursively } from "./ignorelist";
+import { getIgnorePaths, readDirectoryRecursively } from "./ignorelist";
 
 export interface Conflict {
   filepath: string;
@@ -21,8 +21,13 @@ export const clientUpdateSchema = z.object({
 
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
 
+export interface ClientStore {
+  syncAll(): Promise<void>;
+  syncSpecificFile(filepath: string): Promise<void>;
+}
 
-export class ClientStore {
+
+export class DirectoryStore implements ClientStore {
   rootDirectory: string;
   db: Database;
   connection: InksyncConnection;
@@ -43,7 +48,7 @@ export class ClientStore {
   }
 
   async syncAll() {
-    console.log("Starting a sync...");
+    console.log(`Starting a sync in ${this.rootDirectory}...`);
     try {
       const conflicts = await this.pullUpdates();
 
