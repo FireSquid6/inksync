@@ -2,7 +2,7 @@ import type { InksyncConnection } from "./connection";
 import path from "path";
 import fs from "fs";
 import { Database } from "bun:sqlite";
-import { DELETED_CONTENT, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, STORE_NAME, STORE_TABLE_NAME } from "../server/constants";
+import { DELETED_CONTENT, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, LAST_UPDATE_FILE_NAME, STORE_NAME, STORE_TABLE_NAME } from "../server/constants";
 import type { Update } from "..";
 import { z } from "zod";
 import { compressFile, decompressFile } from "../compress";
@@ -72,12 +72,36 @@ export class DirectoryStore implements ClientStore {
     console.error("sync specific file not implemented.");
   }
 
-  private async pullUpdates(): Promise<Conflict[]> {
-    const row = this.db.query(`SELECT * FROM ${STORE_TABLE_NAME} ORDER BY last_updated ASC LIMIT 1`).all();
-    const oldestUpdate = z.array(clientUpdateSchema).parse(row)[0];
-    const conflicts: Conflict[] = [];
+  private getLastUpdate(): number {
 
-    const requestTime = oldestUpdate?.last_updated ?? 0;
+    const lastUpdateFilepath = path.join(this.rootDirectory, INKSYNC_DIRECTORY_NAME, LAST_UPDATE_FILE_NAME);
+
+    if (fs.existsSync(lastUpdateFilepath)) {
+      const contents = fs.readFileSync(lastUpdateFilepath).toString();
+      const lastUpdate = parseInt(contents);
+
+      if (isNaN(lastUpdate)) {
+        throw new Error("Got NaN from the last update file");
+      }
+
+      return lastUpdate;
+    } else {
+      return 0;
+    }
+    
+  }
+
+  private setLastUpdate(timestamp: number) {
+    const lastUpdateFilepath = path.join(this.rootDirectory, INKSYNC_DIRECTORY_NAME, LAST_UPDATE_FILE_NAME);
+    const str = timestamp.toString();
+
+    fs.mkdirSync(path.dirname(lastUpdateFilepath), { recursive: true });
+    fs.writeFileSync(lastUpdateFilepath, str);
+  }
+
+  private async pullUpdates(): Promise<Conflict[]> {
+    const requestTime = this.getLastUpdate();
+    const conflicts: Conflict[] = [];
 
     const updateMessage = await this.connection.sendAndRecieve({
       type: "FETCH_UPDATED_SINCE",
@@ -100,6 +124,8 @@ export class DirectoryStore implements ClientStore {
       default:
         throw new Error(`Got ${updateMessage.type} response from a pull`);
     }
+
+    this.setLastUpdate(Date.now());
 
     return conflicts;
   }
