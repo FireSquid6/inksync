@@ -73,7 +73,7 @@ export class DirectoryStore implements ClientStore {
   }
 
   private async pullUpdates(): Promise<Conflict[]> {
-    const row = this.db.query(`SELETCT * FROM ${STORE_TABLE_NAME} ORDER BY last_updated ASC LIMIT 1`).all();
+    const row = this.db.query(`SELECT * FROM ${STORE_TABLE_NAME} ORDER BY last_updated ASC LIMIT 1`).all();
     const oldestUpdate = z.array(clientUpdateSchema).parse(row)[0];
     const conflicts: Conflict[] = [];
 
