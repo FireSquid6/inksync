@@ -38,20 +38,28 @@ export class ClientStore {
   }
 
   async syncAll() {
-    const conflicts = await this.pullUpdates();
+    console.log("Starting a sync...");
+    try {
+      const conflicts = await this.pullUpdates();
 
-    if (conflicts.length !== 0) {
-      // output conflict messages
+      for (const conflict of conflicts) {
+        console.log(`Conflict in ${conflict.filepath}, moved to ${conflict.conflictFilepath}`);
+      }
+
+      await this.pushCurrentUpdate();
+
+    } catch (e) {
+      console.error("Error syncing files:")
+      console.error(e);
     }
-
-    await this.pushCurrentUpdate();
-    console.log("Successfully synced with the server")
+    console.log("Successfully synced with the server");
   }
 
   // TODO
   async syncSpecificFile(filepath: string) {
-
-
+    console.log(`Syncing ${filepath}`);
+    console.error("Error syncing file:");
+    console.error("sync specific file not implemented.");
   }
 
   private async pullUpdates(): Promise<Conflict[]> {
@@ -86,7 +94,6 @@ export class ClientStore {
     return conflicts;
   }
 
-  // TODO - check for aand handle conflicts
   private applyUpdate(update: Update): Conflict | null {
     // update the file
     const filepath = path.join(this.rootDirectory, update.filepath);
@@ -94,6 +101,22 @@ export class ClientStore {
     const dirname = path.dirname(filepath);
 
     const hash = hashText(decompressed);
+    const currentHash = getFileHash(filepath);
+    let conflict: Conflict | null = null;
+
+    if (hash === currentHash) {
+      const base64Hash = btoa(currentHash);
+      const newFilename = "." + base64Hash + "-" + path.basename(filepath) + ".conflict";
+      const dirname = path.dirname(filepath);
+
+      const newFilepath = path.join(dirname, newFilename);
+
+      fs.copyFileSync(filepath, newFilepath);
+      conflict = {
+        filepath: filepath,
+        conflictFilepath: newFilepath,
+      }
+    }
 
     fs.mkdirSync(dirname, { recursive: true });
     fs.writeFileSync(filepath, decompressed);
@@ -108,22 +131,27 @@ export class ClientStore {
       throw new Error(`Tried to apply an update but made ${result.changes} changes instead of 1`);
     }
 
-    return null;
+    console.log(`Pulled file ${update.filepath}`);
+    return conflict;
   }
 
   private async pushCurrentUpdate(): Promise<void> {
     const updates = this.getStagedUpdates();
+    console.log("Pushing updates for file:");
+    for (const update of updates) {
+      console.log(`  ${update.filepath}`);
+    }
 
     const res = await this.connection.sendAndRecieve({
       type: "PUSH_UPDATES",
       updates,
     });
 
+
+
     switch (res.type) {
       case "UPDATE_SUCCESSFUL":
         return;
-      // big difference in throw vs handle
-      // throw is unrecoverable
       case "ERROR":
         throw new Error(`Error pushing updates: ${res.info}`);
       case "OUTDATED":
@@ -136,10 +164,11 @@ export class ClientStore {
   // gets server updates
   private getStagedUpdates(): Update[] {
     const updates: Update[] = [];
+    // TODO - apply ignore file
     const filepaths = fs.readdirSync(this.rootDirectory);
 
     for (const filepath of filepaths) {
-      const update = this.getUpdateForFile(filepath) 
+      const update = this.getUpdateForFile(filepath)
 
       if (update !== null) {
         const absoluteFilepath = path.join(this.rootDirectory, filepath);
@@ -205,9 +234,8 @@ export function getFileHash(filepath: string): string {
   return hashText(text);
 }
 
-
 function hashText(text: string): string {
-  const hasher = new Bun.CryptoHasher("sha512");
+  const hasher = new Bun.CryptoHasher("sha256");
 
   hasher.update(text);
   return hasher.digest().toString();

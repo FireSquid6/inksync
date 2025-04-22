@@ -49,11 +49,16 @@ export class InksyncConnection {
   async sendAndRecieve(message: Message): Promise<Message> {
     return new Promise((resolve) => {
       const unsubscribe = this.onMessage((m) => {
+        clearTimeout(timer);
         resolve(m);
         unsubscribe();
       });
 
       this.socket.send(makeMessage(message));
+
+      const timer = setTimeout(() => {
+        throw new Error(`Error while sending ${message.type} message: timed out after 5000 ms`);
+      }, 5000);
     })
   }
 }
