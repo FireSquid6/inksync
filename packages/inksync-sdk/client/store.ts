@@ -1,11 +1,12 @@
-import type { InksyncConnection } from ".";
+import type { InksyncConnection } from "./connection";
 import path from "path";
 import fs from "fs";
 import { Database } from "bun:sqlite";
-import { DELETED_CONTENT, INKSYNC_DIRECTORY_NAME, STORE_NAME, STORE_TABLE_NAME } from "../server/constants";
+import { DELETED_CONTENT, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, STORE_NAME, STORE_TABLE_NAME } from "../server/constants";
 import type { Update } from "..";
 import { z } from "zod";
 import { compressFile, decompressFile } from "../compress";
+import { getIgnorePaths, isIgnored, readDirectoryRecursively } from "./ignorelist";
 
 export interface Conflict {
   filepath: string;
@@ -25,6 +26,7 @@ export class ClientStore {
   rootDirectory: string;
   db: Database;
   connection: InksyncConnection;
+  ignoreList: string[];
 
   constructor(directory: string, connection: InksyncConnection) {
     this.rootDirectory = directory;
@@ -34,6 +36,9 @@ export class ClientStore {
     this.connection = connection;
 
     this.db.query(`CREATE TABLE IF NOT EXISTS ${STORE_TABLE_NAME}(filepath TEXT PRIMARY KEY, hash TEXT, last_updated DATETIME default current_timestamp);`).all()
+
+    const ignoreFilepath = path.join(directory, IGNOREFILE_NAME);
+    this.ignoreList = getIgnorePaths(ignoreFilepath);
 
   }
 
@@ -164,9 +169,8 @@ export class ClientStore {
   // gets server updates
   private getStagedUpdates(): Update[] {
     const updates: Update[] = [];
-    // TODO - apply ignore file
-    const filepaths = fs.readdirSync(this.rootDirectory);
 
+    const filepaths = readDirectoryRecursively(this.rootDirectory, this.ignoreList);
     for (const filepath of filepaths) {
       const update = this.getUpdateForFile(filepath)
 
