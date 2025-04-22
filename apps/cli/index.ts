@@ -16,9 +16,14 @@ program
   .command("sync")
   .description("Connects to a server and syncs")
   .argument("<address>", "The address of the server")
-  .action((address) => {
+  .action(async (address) => {
     const directory = process.cwd();
     const connection = new InksyncConnection(address);
+
+    const res = await connection.sendAndRecieve({
+      type: "AUTHENTICATE",
+      token: "token1",
+    })
 
     const store = new DirectoryStore(directory, connection);
 
