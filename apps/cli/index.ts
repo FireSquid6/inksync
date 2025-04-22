@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { startApp } from "inksync-sdk/server";
-import { InksyncClient } from "inksync-sdk/client";
 
 const program = new Command();
 
@@ -22,7 +21,6 @@ program
     }
 
     const client = new InksyncClient(address);
-    interactive(client);
   });
 
 async function readLine(): Promise<string> {
@@ -32,24 +30,6 @@ async function readLine(): Promise<string> {
   return ""; // Return an empty string if no input is received
 }
 
-async function interactive(client: InksyncClient) {
-  client.onMessage((m) => {
-    console.log("Recieved message:");
-    console.log(m);
-  });
-
-  while (true) {
-    const line = await readLine();
-    switch (line) {
-      case "FETCH":
-
-        break;
-      case "PUSH":
-
-        break;
-    }
-  }
-}
 
 export async function runCli() {
   await program.parseAsync();
