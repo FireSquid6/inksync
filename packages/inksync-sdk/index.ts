@@ -67,9 +67,24 @@ export const messageSchema = z.discriminatedUnion("type", [
 // Type inference from the schema
 export type Message = z.infer<typeof messageSchema>;
 
-export function parseMessage(message: string): Message | Error {
+export function parseMessage(message: unknown): Message | Error {
   try {
-    const data = JSON.parse(message);
+    if (message === null || message === undefined) {
+      throw new Error("message was undefined");
+    }
+    let data: Object = {};
+
+    switch (typeof message) {
+      case "string":
+        data = JSON.parse(message);
+        break;
+      case "object":
+        data = message;
+        break;
+      default:
+        throw new Error(`Unparsable type of message: ${typeof message}`);
+    }
+
     return messageSchema.parse(data);
   } catch (e) {
     return e as Error;

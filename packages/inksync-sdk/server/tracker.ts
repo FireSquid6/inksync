@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs";
-import { INKSYNC_DIRECTORY_NAME, TABLE_NAME, TRACKERFILE_NAME } from "./constants";
+import { DELETED_CONTENT, INKSYNC_DIRECTORY_NAME, TABLE_NAME, TRACKERFILE_NAME } from "./constants";
 import { Database } from "bun:sqlite";
 import { z } from "zod";
 
@@ -17,7 +17,7 @@ export type Trackerfile = z.infer<typeof trackerFileSchema>;
 export interface Tracker {
   getPathsUpdatedSince(time: number): Promise<Trackerfile>;
   pushUpdate(filepath: string, contents: string): Promise<void>;
-  getCurrentContent(filepath: string): Promise<string | null>;
+  getCurrentContent(filepath: string): Promise<string>;
   getLastUpdate(filepath: string): Promise<number | null>;
 }
 
@@ -31,7 +31,7 @@ export function failingTracker(): Tracker {
     pushUpdate(_1: string, _2: string): Promise<void> {
       throw new Error("Forgot to assign tracker");
     },
-    getCurrentContent(_: string): Promise<string | null> {
+    getCurrentContent(_: string): Promise<string> {
       throw new Error("Forgot to assign tracker");
     },
     getLastUpdate(_: string): Promise<number | null> {
@@ -76,7 +76,7 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
       fs.mkdirSync(dirname, { recursive: true });
       fs.writeFileSync(filepath, contents);
     },
-    async getCurrentContent(relativePath: string): Promise<string | null> {
+    async getCurrentContent(relativePath: string): Promise<string> {
       const filepath = path.join(rootDirectory, relativePath);
       if (fs.existsSync(filepath)) {
         const contents = fs.readFileSync(filepath).toString();
@@ -84,7 +84,7 @@ export function getDirectoryTracker(rootDirectory: string): Tracker {
         return contents;
       }
 
-      return null;
+      return DELETED_CONTENT;
     },
     async getLastUpdate(filepath: string): Promise<number | null> {
       const result = db.query(`SELECT filepath, last_updated FROM ${TABLE_NAME} WHERE filepath = ${filepath}`).all();

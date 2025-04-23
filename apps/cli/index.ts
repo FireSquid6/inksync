@@ -20,10 +20,18 @@ program
     const directory = process.cwd();
     const connection = new InksyncConnection(address);
 
+    await connection.waitForConnection();
+
     const res = await connection.sendAndRecieve({
       type: "AUTHENTICATE",
       token: "token1",
     })
+
+    if (res.type !== "AUTHENTICATED") {
+      console.log("Failed to authenticated. Got message:")
+      console.log(res);
+      return;
+    }
 
     const store = new DirectoryStore(directory, connection);
 

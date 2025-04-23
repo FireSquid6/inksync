@@ -22,7 +22,7 @@ async function processMessage(ctx: MessageContext) {
   switch (message.type) {
     case "AUTHENTICATE":
       if (tokenIsValid(message.token)) {
-        authenticatedSocketIds.add(message.token);
+        authenticatedSocketIds.add(ctx.ws.id);
         ws.subscribe(CHANNEL_NAME);
         console.log(`  Authenticated ${ws.id}`);
         ws.send(makeMessage({
@@ -84,7 +84,7 @@ async function processMessage(ctx: MessageContext) {
         const content = await tracker.getCurrentContent(t.filepath);
 
         if (content === null) {
-          throw new Error("Somehow failed to get content for a file that is supposed to exist");
+          throw new Error(`Failed to get content for ${t.filepath}`);
         }
 
         const compressed = compressFile(content);
@@ -117,14 +117,15 @@ async function processMessage(ctx: MessageContext) {
     .state("config", defaultConfig())
     .state("authenticatedSocketIds", new Set<string>())
     .ws("listen", {
-      body: t.Object({
-        message: t.String(),
-      }),
-      message: async (ws, { message: rawMessage }) => {
+      message: async (ws, rawMessage) => {
         const { authenticatedSocketIds, tracker } = ws.data.store;
         const id = ws.id;
+
         const message = parseMessage(rawMessage);
+
+        console.log("\nNEW REQUEST");
         if (message instanceof Error) {
+          console.log("Got an unparsable message.");
           ws.send(makeMessage({
             type: "ERROR",
             info: message.message,
@@ -132,30 +133,41 @@ async function processMessage(ctx: MessageContext) {
           return;
         }
 
+        console.log(`PROCESSING ${message.type}:`)
+
         if (!authenticatedSocketIds.has(id) && message.type !== "AUTHENTICATE") {
+          console.log("Not authenticated");
           ws.send(makeMessage({
             type: "ERROR",
             info: "Not authenticated",
           }));
+          return;
         }
-
-        console.log(`PROCESSING ${message.type}:`)
 
         try {
           await processMessage({ message, ws, authenticatedSocketIds, tracker });
+          return;
         } catch (e) {
           console.log(`  Unhandled error processing: ${e}`);
           ws.send(makeMessage({
             type: "ERROR",
             info: `Uncaught error: ${(e as Error).message}`,
           }));
+          return;
         }
 
+      },
+      open: (ws) => {
+        console.log(`CONNECTION: ${ws.id}`);
       },
       close: (ws) => {
         const { authenticatedSocketIds } = ws.data.store;
         authenticatedSocketIds.delete(ws.id);
+        console.log(`DISCONNECTION: ${ws.id}`);
       }
+    })
+    .get("/hello", () => {
+      return "world!";
     })
 
 
