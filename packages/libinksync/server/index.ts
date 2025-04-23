@@ -1,0 +1,116 @@
+import path from "path";
+import fs from "fs";
+import { Store, Update } from "../store";
+import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
+import { Readable } from "stream";
+
+export interface SuccessfulUpdate {
+  type: "success";
+  time: number;
+  newHash: string;
+}
+
+export interface FailedUpdate {
+  type: "failure";
+  reason: "Non-matching hash";
+}
+
+export type UpdateResult = SuccessfulUpdate | FailedUpdate
+
+export interface InksyncServer {
+  pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
+  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | Bun.BunFile;
+  getUpdatesSince(time: number): Update[]; 
+}
+
+export class DirectoryServer implements InksyncServer {
+  private store: Store;
+  private directory: string;
+
+  constructor(directory: string) {
+    const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
+    fs.mkdirSync(inksyncPath, { recursive: true });
+
+    const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
+    this.store = new Store(dbPath);
+    this.directory = directory;
+  }
+  
+  async pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
+    const currentUpdate = this.store.getRecord(filepath);
+
+    if (currentUpdate === null) {
+      if (currentHash !== "") {
+        return {
+          type: "failure",
+          reason: "Non-matching hash",
+        }
+      }
+    } else {
+      if (currentHash !== currentUpdate.hash) {
+        return {
+          type: "failure",
+          reason: "Non-matching hash",
+        }
+      }
+    }
+
+    const absoluteFilepath = path.join(this.directory, filepath);
+    const absoluteDirectory = path.dirname(absoluteFilepath);
+
+    fs.mkdirSync(absoluteDirectory, { recursive: true });
+    const newHash = await writeFileStream(fileContents, filepath);
+    const time = this.store.updateRecord(filepath, newHash);
+
+    return {
+      type: "success",
+      time,
+      newHash,
+    }
+  }
+
+  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | Bun.BunFile {
+    const record = this.store.getRecord(filepath);
+    if (record === null) {
+      return "NON-EXISTANT";
+    }
+    if (record.hash === DELETED_HASH) {
+      return "DELETED";
+    }
+    const fullPath = path.join(this.directory, filepath);
+    const file = Bun.file(fullPath);
+
+    return file;
+  }
+
+  getUpdatesSince(timestamp: number): Update[] {
+    const updates = this.store.getRecordsNewThan(timestamp);
+    return updates;
+  }
+}
+
+export async function writeFileStream(file: Readable | "DELETE", filepath: string): Promise<string> {
+  const writeStream = fs.createWriteStream(filepath);
+
+  if (file === "DELETE") {
+    fs.rmSync(filepath);
+    return DELETED_HASH;
+  }
+
+  const hash = new Bun.CryptoHasher("sha256");
+
+  await new Promise<void>((resolve, reject) => {
+    file.on("Data", (chunk) => {
+      hash.update(chunk);
+      writeStream.write(chunk);
+    });
+    file.on("end", () => {
+      writeStream.end();
+      resolve();
+    });
+    file.on("error", (err) => reject(err));
+    writeStream.on("error", (err) => reject(err));
+  });
+
+  return hash.digest("base64url");
+}
