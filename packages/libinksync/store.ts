@@ -1,5 +1,5 @@
 import { z } from "zod";
-import Sqlite, { type Database } from "better-sqlite3";
+import { Database } from "bun:sqlite";
 
 const TABLE_NAME = "updates";
 
@@ -14,9 +14,8 @@ export class Store {
   private db: Database;
 
   constructor(dbFile: string) {
-    this.db = new Sqlite(dbFile);
-    this.db.pragma("journal_mode = WAL");
-    this.db.prepare(`
+    this.db = new Database(dbFile);
+    this.db.query(`
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME}(
         filepath TEXT PRIMARY KEY, 
         hash TEXT, 
@@ -25,23 +24,23 @@ export class Store {
     `).run();
   }
 
-  updateRecord(filepath: string, hash: string): number {
-    const timestamp = Date.now();
-
-    const result = this.db.prepare(`
+  updateRecord(filepath: string, hash: string, time: number) {
+    const result = this.db.query(`
       INSERT OR REPLACE INTO ${TABLE_NAME} (filepath, hash, time)
       VALUES (?, ?, ?)
-    `).run(filepath, hash, timestamp);
+    `).run(filepath, hash, time);
 
     if (result.changes !== 1) {
       throw new Error(`Tried to apply update to ${filepath} but got ${result.changes} changes instead of 1`);
     }
+  }
 
-    return timestamp;
+  updateRecordObject(update: Update) {
+    this.updateRecord(update.filepath, update.hash, update.time);
   }
 
   getRecord(filepath: string): Update | null {
-    const result = this.db.prepare(`
+    const result = this.db.query(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE filepath = ?;
     `).all(filepath);
@@ -59,11 +58,19 @@ export class Store {
   }
 
   getRecordsNewThan(timestamp: number): Update[] {
-    const result = this.db.prepare(`
+    const result = this.db.query(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE last_updated > ?;
     `).all(timestamp);
 
+    const updates = z.array(updateSchema).parse(result);
+    return updates;
+  }
+
+  getAllRecords(): Update[] {
+    const result = this.db.query(`
+      SELECT filepath, time, hash FROM ${TABLE_NAME}
+    `).all();
     const updates = z.array(updateSchema).parse(result);
     return updates;
   }
