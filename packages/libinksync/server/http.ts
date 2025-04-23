@@ -11,7 +11,7 @@ export const app = new Elysia()
     const names = ctx.store.vaults.map((v) => v.getName());
     return names;
   })
-  .post("/vaults/:vault/:filepath", async (ctx) => {
+  .post("/vaults/:vault/files/:filepath", async (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
     if (!vault) {
@@ -42,7 +42,7 @@ export const app = new Elysia()
       file: t.Union([t.File(), t.Literal("DELETE")]),
     })
   })
-  .get("/vaults/:vault/:filepath", (ctx) => {
+  .get("/vaults/:vault/files/:filepath", (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
     if (!vault) {
@@ -79,7 +79,7 @@ export const app = new Elysia()
       vault: t.String(),
     }),
   })
-  .get("/vault/:vault/updates/:filepath", (ctx) => {
+  .get("/vaults/:vault/updates/:filepath", (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
     if (!vault) {
