@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs";
-import { Store, Update } from "../store";
+import { Store, type Update } from "../store";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
 import { Readable } from "stream";
 
