@@ -17,23 +17,41 @@ export interface FailedUpdate {
 
 export type UpdateResult = SuccessfulUpdate | FailedUpdate
 
-export interface InksyncServer {
+export interface Vault {
   pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
   getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | Bun.BunFile;
+  getUpdateFor(filepath: string): Update | null;
   getUpdatesSince(time: number): Update[]; 
+  getName(): string;
+  isAuthorized(token: string): Promise<boolean>;
 }
 
-export class DirectoryServer implements InksyncServer {
+export class DirectoryVault implements Vault {
   private store: Store;
   private directory: string;
+  private name: string;
 
-  constructor(directory: string) {
+  constructor(name: string, directory: string) {
     const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
     fs.mkdirSync(inksyncPath, { recursive: true });
 
     const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
+    this.name = name;
     this.store = new Store(dbPath);
     this.directory = directory;
+  }
+
+  getName() {
+    return this.name;
+  }
+
+  async isAuthorized(_: string): Promise<boolean> {
+    return true;
+  }
+
+  getUpdateFor(filepath: string) {
+    const update = this.store.getRecord(filepath);
+    return update;
   }
   
   async pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
