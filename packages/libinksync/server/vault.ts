@@ -54,6 +54,7 @@ export class DirectoryVault implements Vault {
     return update;
   }
   
+  // current hash should be an empty string for an update that doesn't exist
   async pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
     const currentUpdate = this.store.getRecord(filepath);
 
@@ -77,8 +78,9 @@ export class DirectoryVault implements Vault {
     const absoluteDirectory = path.dirname(absoluteFilepath);
 
     fs.mkdirSync(absoluteDirectory, { recursive: true });
-    const newHash = await writeFileStream(fileContents, filepath);
-    const time = this.store.updateRecord(filepath, newHash);
+    const newHash = await writeFileStream(fileContents, absoluteFilepath);
+    const time = Date.now();
+    this.store.updateRecord(filepath, newHash, time);
 
     return {
       type: "success",
@@ -108,6 +110,9 @@ export class DirectoryVault implements Vault {
 }
 
 export async function writeFileStream(file: Readable | "DELETE", filepath: string): Promise<string> {
+  const dirname = path.dirname(filepath);
+  fs.mkdirSync(dirname, { recursive: true });
+
   const writeStream = fs.createWriteStream(filepath);
 
   if (file === "DELETE") {
@@ -117,18 +122,10 @@ export async function writeFileStream(file: Readable | "DELETE", filepath: strin
 
   const hash = new Bun.CryptoHasher("sha256");
 
-  await new Promise<void>((resolve, reject) => {
-    file.on("Data", (chunk) => {
-      hash.update(chunk);
-      writeStream.write(chunk);
-    });
-    file.on("end", () => {
-      writeStream.end();
-      resolve();
-    });
-    file.on("error", (err) => reject(err));
-    writeStream.on("error", (err) => reject(err));
-  });
+  for await (const chunk of file) {
+    hash.update(chunk);
+    writeStream.write(chunk);
+  }
 
   return hash.digest("base64url");
 }
