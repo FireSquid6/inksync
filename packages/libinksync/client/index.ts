@@ -1,10 +1,10 @@
 import { treaty, type Treaty } from "@elysiajs/eden";
-import { App } from "../server/http";
-import { Store, Update } from "../store";
+import { type App } from "../server/http";
+import { Store, type Update } from "../store";
 import path from "path";
 import fs from "fs";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, LAST_SYNC_FILE, STORE_DATABASE_FILE } from "../constants";
-import { SyncResult } from "./results";
+import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
 
 export interface VaultClient {
