@@ -26,6 +26,7 @@ export interface Vault {
   isAuthorized(token: string): Promise<boolean>;
 }
 
+// TODO - implement a mutex so all of these actions are put into a queue
 export class DirectoryVault implements Vault {
   private store: Store;
   private directory: string;

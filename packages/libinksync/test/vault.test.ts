@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
-import { DirectoryVault, type SuccessfulUpdate } from "../server/vault";
+import { DirectoryVault, type FailedUpdate, type SuccessfulUpdate } from "../server/vault";
 import path from "path";
 import { Readable } from "stream";
 
@@ -118,6 +118,20 @@ test("tracking updates that are the same", async () => {
   expect(firstUpdate.newHash).toBe(secondUpdate.newHash);
 })
 
-test("making bad updates", () => {
+test("making bad updates", async () => {
+  const dir = path.join(testdir, "test-vault4");
+  const firstWriteAttempt = Readable.from("hello!");
+  const secondWriteAttempt = Readable.from("goodbye!");
+  const vault = new DirectoryVault("vault", dir);
+  const filepath = "message.txt";
+  
+  let firstUpdate = await vault.pushUpdate(firstWriteAttempt, filepath, "");
+  expect(firstUpdate.type).toBe("success");
+  firstUpdate = firstUpdate as SuccessfulUpdate;
 
+  // we use a bad hash!
+  let secondUpdate = await vault.pushUpdate(secondWriteAttempt, filepath, "");
+  expect(secondUpdate.type).toBe("failure");
+  secondUpdate = secondUpdate as FailedUpdate;
+  expect(secondUpdate.reason).toBe("Non-matching hash");
 })
