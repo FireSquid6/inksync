@@ -6,11 +6,22 @@ import fs from "fs";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, LAST_SYNC_FILE, STORE_DATABASE_FILE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
+import type { UpdateResult } from "@/server/vault";
 
 export interface VaultClient {
   syncAll(): Promise<SyncResult[]>;
   syncSpecificFile(filepath: string): Promise<SyncResult>;
   // TODO - forceRollbackToServer(filepath: string)
+}
+
+class HttpError {
+  code: number;
+  error: unknown;
+
+  constructor(code: number, error?: unknown) {
+    this.code = code;
+    this.error = error;
+  }
 }
 
 export class DirectoryClient implements VaultClient {
@@ -54,7 +65,7 @@ export class DirectoryClient implements VaultClient {
     updated.map((u) => filepathsToSync.push({ filepath: u.filepath, knownToBeUpdated: undefined, update: u }));
     changedFiles.map((f) => filepathsToSync.push({ filepath: f, knownToBeUpdated: true, update: undefined }));
 
-    const result = await Promise.all(filepathsToSync.map(({filepath, knownToBeUpdated}) => this.syncSpecificFile(filepath, knownToBeUpdated)));
+    const result = await Promise.all(filepathsToSync.map(({ filepath, knownToBeUpdated }) => this.syncSpecificFile(filepath, knownToBeUpdated)));
 
     this.setFullSync(Date.now());
 
@@ -62,74 +73,59 @@ export class DirectoryClient implements VaultClient {
   }
 
   async syncSpecificFile(filepath: string, isModified?: boolean, serverUpdate?: Update | "UNTRACKED"): Promise<SyncResult> {
-    const encodedFilepath = encodeFilepath(filepath);
-    if (serverUpdate === undefined) {
-      const r = await this.api
-        .vaults({ vault: this.vault })
-        .updates({ filepath: encodedFilepath })
-        .get()
-
-      if (r.status !== 200 || r.data === null) {
-        return makeError(r.status, r.error);
-      }
-      serverUpdate = r.data;
-    }
-    const clientUpdate = this.store.getRecord(filepath);
-
-    // this means the client is NEWER than the server which should never happen!
-    if ((serverUpdate !== "UNTRACKED") && (clientUpdate?.time ?? 0 > serverUpdate.time)) {
-      return {
-        type: "client-error",
-        error: new Error("Super duper bad state reached where client has newer state than server."),
-      }
-    }
-
-    // TODO - check this line
-    const inSync = (clientUpdate === null || serverUpdate === "UNTRACKED")
-      ? (serverUpdate === "UNTRACKED")
-      : clientUpdate.time === serverUpdate.time;
-
-    if (isModified === undefined) {
-      isModified = this.isModified(filepath, clientUpdate ?? undefined);
-    }
-
-    switch ([inSync, isModified]) {
-      // case 1 - in-sync update made, push to server
-      case [true, true]:
-
-        break;
-      // case 2 - out-of-sunc update made, we have a conflict
-      case [false, true]:
-
-        break;
-      // case 3 - do nothing! Everything is fine!
-      case [true, false]:
-        return {
-          type: "in-sync",
-        }
-      // case 4 - need to pull from server, but no conflict
-      case [false, false]:
-        const serverFile = await this.api
-          .vaults({ vault: this.vault })
-          .files({ filepath: encodedFilepath })
-          .get();
-
-        if (serverFile.data === null || serverFile.status !== 200) {
-          return makeError(serverFile.status, serverFile.data);
-        }
-        
-        // have to update our store
-        
-    }
   }
 
-  private getChangedFiles(): string[] {
+  private async getChangedFiles(): Promise<string[]> {
     // TODO
     return [];
   }
 
-  private isModified(filepath: string, clientUpdate?: Update): boolean {
+  private async isModified(filepath: string, clientUpdate?: Update): Promise<boolean> {
+    // TODO
     return true;
+  }
+
+  private async getServerUpdate(filepath: string): Promise<"UNTRACKED" | Update | HttpError> {
+    const r = await this.api
+      .vaults({ vault: this.vault })
+      .updates({ filepath: encodeFilepath(filepath) })
+      .get()
+
+    if (r.status !== 200 || r.data === null) {
+      return new HttpError(r.status, r.error);
+    }
+
+    return r.data;
+  }
+
+  private async pushUpdate(filepath: string, currentHash?: string): Promise<UpdateResult | HttpError> {
+    const absoluteFilepath = path.join(this.rootDirectory, filepath);
+    const file = Bun.file(absoluteFilepath);
+    let data: "DELETE" | File = "DELETE";
+
+    if (await file.exists()) {
+      const arrayBuffer = await file.arrayBuffer();
+      data = new File([arrayBuffer], filepath, { type: file.type });
+    }
+
+    if (!currentHash) {
+      const update = this.store.getRecord(filepath);
+      currentHash = update === null ? "" : update.hash;
+    }
+
+    const res = await this.api
+      .vaults({ vault: this.vault })
+      .files({filepath: encodeFilepath(filepath)})
+      .post({
+        file: data,
+        currentHash: currentHash,
+      });
+
+    if (res.status !== 200 || res.data === null) {
+      return new HttpError(res.status, res.error);
+    }
+
+    return res.data;
   }
 
 

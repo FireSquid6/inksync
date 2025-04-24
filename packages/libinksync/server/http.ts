@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { Vault } from "./vault";
+import { type Vault } from "./vault";
 import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
 import { Readable } from "stream";
