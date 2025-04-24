@@ -45,8 +45,77 @@ test("pushing updates", async () => {
   expect(res3).toBe("DELETED");
 })
 
-test("tracking updates", () => {
+test("tracking updates", async () => {
+  const dir = path.join(testdir, "test-vault2");
+  const contentsString1 = `
+  {
+    "name": "Jonathan Deiss",
+    "birthday": "2006/04/13",
+    "major": "Computer Science",
+    "id": 12417
+  }
+  `;
 
+  const contentsString2 = `
+  {
+    "name": "Jonathan Deiss",
+    "birthday": "2006/04/13",
+    "major": "Computer Science",
+    "id": 12418
+  }
+  `;
+
+  const contents1 = Readable.from(contentsString1);
+  const contents2 = Readable.from(contentsString2);
+  const vault = new DirectoryVault("vault", dir);
+  const filepath = "students/jdeiss/information.json";
+
+  let firstUpdate = await vault.pushUpdate(contents1, filepath, "");
+  expect(firstUpdate.type).toBe("success");
+  firstUpdate = firstUpdate as SuccessfulUpdate;
+
+  let secondUpdate = await vault.pushUpdate(contents2, filepath, firstUpdate.newHash);
+  expect(secondUpdate.type).toBe("success");
+  secondUpdate = secondUpdate as SuccessfulUpdate;
+
+  expect(firstUpdate.newHash).not.toBe(secondUpdate.newHash);
+  const file = vault.getCurrent(filepath);
+
+  if (typeof file === "string") {
+    throw new Error(`Got ${file} instead of a file`);
+  }
+
+  const text = await file.text();
+
+  expect(text).toBe(contentsString2);
+})
+
+test("tracking updates that are the same", async () => {
+  const dir = path.join(testdir, "test-vault3");
+  const contentsString = `
+  {
+    "name": "Jonathan Deiss",
+    "birthday": "2006/04/13",
+    "major": "Computer Science"
+  }
+  `;
+
+  // readable is consumed!
+  const contents1 = Readable.from(contentsString);
+  const contents2 = Readable.from(contentsString);
+
+  const vault = new DirectoryVault("vault", dir);
+  const filepath = "students/jdeiss/information.json";
+
+  let firstUpdate = await vault.pushUpdate(contents1, filepath, "");
+  expect(firstUpdate.type).toBe("success");
+  firstUpdate = firstUpdate as SuccessfulUpdate;
+
+  let secondUpdate = await vault.pushUpdate(contents2, filepath, firstUpdate.newHash);
+  expect(secondUpdate.type).toBe("success");
+  secondUpdate = secondUpdate as SuccessfulUpdate;
+
+  expect(firstUpdate.newHash).toBe(secondUpdate.newHash);
 })
 
 test("making bad updates", () => {
