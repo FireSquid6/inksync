@@ -99,7 +99,6 @@ export class DirectoryVault implements Vault {
       return "DELETED";
     }
     const fullPath = path.join(this.directory, filepath);
-    console.log("full path is:", fullPath);
     const file = Bun.file(fullPath);
 
     return file;

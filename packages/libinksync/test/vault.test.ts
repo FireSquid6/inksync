@@ -33,10 +33,8 @@ test("pushing updates", async () => {
   expect(typeof res2).not.toBe("string");
 
   res2 = res2 as Bun.BunFile; 
-  console.log(res2);
 
   const text = await res2.text();
-  console.log("Text is:", text);
   expect(text).toBe(contentsString);
 
 
