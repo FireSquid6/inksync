@@ -19,7 +19,7 @@ export type UpdateResult = SuccessfulUpdate | FailedUpdate
 
 export interface Vault {
   pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
-  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | Bun.BunFile;
+  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | fs.ReadStream;
   getUpdateFor(filepath: string): Update | null;
   getUpdatesSince(time: number): Update[]; 
   getName(): string;
@@ -90,7 +90,7 @@ export class DirectoryVault implements Vault {
     }
   }
 
-  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | Bun.BunFile {
+  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | fs.ReadStream {
     const record = this.store.getRecord(filepath);
     if (record === null) {
       return "NON-EXISTANT";
@@ -99,9 +99,9 @@ export class DirectoryVault implements Vault {
       return "DELETED";
     }
     const fullPath = path.join(this.directory, filepath);
-    const file = Bun.file(fullPath);
+    const stream = fs.createReadStream(fullPath);
 
-    return file;
+    return stream;
   }
 
   getUpdatesSince(timestamp: number): Update[] {

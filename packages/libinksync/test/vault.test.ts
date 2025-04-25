@@ -2,7 +2,9 @@ import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
 import { DirectoryVault, type FailedUpdate, type SuccessfulUpdate } from "../server/vault";
 import path from "path";
+import fs from "fs";
 import { Readable } from "stream";
+import { streamToString } from "@/encode";
 
 
 test("pushing updates", async () => {
@@ -31,10 +33,9 @@ test("pushing updates", async () => {
   // get status of that file
   let res2 = vault.getCurrent(filepath);
   expect(typeof res2).not.toBe("string");
+  res2 = res2 as fs.ReadStream; 
 
-  res2 = res2 as Bun.BunFile; 
-
-  const text = await res2.text();
+  const text = await streamToString(res2);
   expect(text).toBe(contentsString);
 
 
@@ -87,7 +88,7 @@ test("tracking updates", async () => {
     throw new Error(`Got ${file} instead of a file`);
   }
 
-  const text = await file.text();
+  const text = await streamToString(file);
 
   expect(text).toBe(contentsString2);
 })
