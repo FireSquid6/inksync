@@ -6,7 +6,7 @@ import { Readable } from "stream";
 
 
 test("pushing updates", async () => {
-  const dir = path.join(testdir, "test-vault");
+  const dir = path.join(testdir, "test-vault1");
   const vault = new DirectoryVault("vault", dir);
   const filepath = "students/jdeiss/information.json";
   const contentsString = `
@@ -31,8 +31,12 @@ test("pushing updates", async () => {
   // get status of that file
   let res2 = vault.getCurrent(filepath);
   expect(typeof res2).not.toBe("string");
+
   res2 = res2 as Bun.BunFile; 
+  console.log(res2);
+
   const text = await res2.text();
+  console.log("Text is:", text);
   expect(text).toBe(contentsString);
 
 
