@@ -1,8 +1,8 @@
 import path from "path";
-import fs from "fs";
 import { Store, type Update } from "../store";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
-import { Readable } from "stream";
+import type { Filesystem } from "@/filesystem";
+import { DirectoryFilesystem } from "@/filesystem";
 
 export interface SuccessfulUpdate {
   type: "success";
@@ -18,8 +18,8 @@ export interface FailedUpdate {
 export type UpdateResult = SuccessfulUpdate | FailedUpdate
 
 export interface Vault {
-  pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
-  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | fs.ReadStream;
+  pushUpdate(fileContents: Blob | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
+  getCurrent(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | Blob>;
   getUpdateFor(filepath: string): Update | null;
   getUpdatesSince(time: number): Update[]; 
   getName(): string;
@@ -27,19 +27,21 @@ export interface Vault {
 }
 
 // TODO - implement a mutex so all of these actions are put into a queue
+// TODO - implement a max file size
 export class DirectoryVault implements Vault {
   private store: Store;
   private directory: string;
   private name: string;
+  private fs: Filesystem;
 
   constructor(name: string, directory: string) {
     const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
-    fs.mkdirSync(inksyncPath, { recursive: true });
-
     const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
     this.name = name;
     this.store = new Store(dbPath);
     this.directory = directory;
+
+    this.fs = new DirectoryFilesystem(this.directory);
   }
 
   getName() {
@@ -56,7 +58,7 @@ export class DirectoryVault implements Vault {
   }
   
   // current hash should be an empty string for an update that doesn't exist
-  async pushUpdate(fileContents: Readable | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
+  async pushUpdate(fileContents: Blob | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
     const currentUpdate = this.store.getRecord(filepath);
 
     if (currentUpdate === null) {
@@ -75,12 +77,11 @@ export class DirectoryVault implements Vault {
       }
     }
 
-    const absoluteFilepath = path.join(this.directory, filepath);
-    const absoluteDirectory = path.dirname(absoluteFilepath);
 
-    fs.mkdirSync(absoluteDirectory, { recursive: true });
-    const newHash = await writeFileStream(fileContents, absoluteFilepath);
+    const newHash = hashBlob(fileContents);
     const time = Date.now();
+
+    this.fs.writeTo(filepath, fileContents);
     this.store.updateRecord(filepath, newHash, time);
 
     return {
@@ -90,18 +91,18 @@ export class DirectoryVault implements Vault {
     }
   }
 
-  getCurrent(filepath: string): "DELETED" | "NON-EXISTANT" | fs.ReadStream {
+  async getCurrent(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | Blob> {
     const record = this.store.getRecord(filepath);
+
     if (record === null) {
       return "NON-EXISTANT";
     }
     if (record.hash === DELETED_HASH) {
       return "DELETED";
     }
-    const fullPath = path.join(this.directory, filepath);
-    const stream = fs.createReadStream(fullPath);
 
-    return stream;
+    const blob = await this.fs.readFrom(filepath);
+    return blob;
   }
 
   getUpdatesSince(timestamp: number): Update[] {
@@ -110,23 +111,12 @@ export class DirectoryVault implements Vault {
   }
 }
 
-export async function writeFileStream(file: Readable | "DELETE", filepath: string): Promise<string> {
-  const dirname = path.dirname(filepath);
-  fs.mkdirSync(dirname, { recursive: true });
 
-  const writeStream = fs.createWriteStream(filepath);
-
-  if (file === "DELETE") {
-    fs.rmSync(filepath);
+function hashBlob(blob: Blob | "DELETE"): string {
+  if (blob === "DELETE") {
     return DELETED_HASH;
   }
-
   const hash = new Bun.CryptoHasher("sha256");
-
-  for await (const chunk of file) {
-    hash.update(chunk);
-    writeStream.write(chunk);
-  }
-
+  hash.update(blob);
   return hash.digest("base64url");
 }

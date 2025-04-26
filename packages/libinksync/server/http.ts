@@ -20,13 +20,7 @@ export const app = new Elysia()
     const fp = decodeFilepath(filepath);
     const { file, currentHash } = ctx.body;
 
-    let content: Readable | "DELETE" = "DELETE";
-
-    if (file !== "DELETE") {
-      content = Readable.from(file.stream());
-    }
-
-    const result = await vault.pushUpdate(content, fp, currentHash);
+    const result = await vault.pushUpdate(file, fp, currentHash);
     if (result.type === "success") {
       return result;
     }
@@ -42,7 +36,7 @@ export const app = new Elysia()
       file: t.Union([t.File(), t.Literal("DELETE")]),
     })
   })
-  .get("/vaults/:vault/files/:filepath", (ctx) => {
+  .get("/vaults/:vault/files/:filepath", async (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
     if (!vault) {
@@ -50,7 +44,7 @@ export const app = new Elysia()
     }
     const fp = decodeFilepath(filepath);
 
-    const result = vault.getCurrent(fp);
+    const result = await vault.getCurrent(fp);
     return result;
   }, {
     params: t.Object({
