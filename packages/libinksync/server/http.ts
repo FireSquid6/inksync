@@ -2,7 +2,6 @@ import { Elysia, t } from "elysia";
 import { type Vault } from "./vault";
 import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
-import { Readable } from "stream";
 
 // TODO - encode and decode filepaths into base 64
 export const app = new Elysia()
