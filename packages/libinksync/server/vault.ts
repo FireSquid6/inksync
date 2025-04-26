@@ -112,7 +112,7 @@ export class DirectoryVault implements Vault {
 }
 
 
-function hashBlob(blob: Blob | "DELETE"): string {
+export function hashBlob(blob: Blob | "DELETE"): string {
   if (blob === "DELETE") {
     return DELETED_HASH;
   }

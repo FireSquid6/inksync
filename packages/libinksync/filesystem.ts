@@ -9,6 +9,7 @@ export interface Filesystem {
   sizeOf(filepath: string): Promise<number>;  // size in bytes
   listdir(filepath: string, recursive?: boolean): Promise<string[]>;
   isDir(filepath: string): Promise<boolean>;
+  copyTo(src: string, dest: string): Promise<void>;
 }
 
 
@@ -64,5 +65,12 @@ export class DirectoryFilesystem implements Filesystem {
     const fp = path.join(this.root, filepath);
     const stats = fs.statSync(fp);
     return stats.isDirectory();
+  }
+
+  async copyTo(src: string, dest: string): Promise<void> {
+    const srcFp = path.join(this.root, src);
+    const destFp = path.join(this.root, dest);
+    
+    fs.cpSync(srcFp, destFp);
   }
 }

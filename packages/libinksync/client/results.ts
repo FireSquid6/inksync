@@ -1,42 +1,46 @@
-export interface Success {
-  type: "success";
-  filepath: string;
+export interface Pushed {
+  domain: "good";
+  type: "pushed";
+}
+
+export interface Pulled {
+  domain: "good";
+  type: "pulled";
 }
 
 export interface Conflict {
+  domain: "good"
   type: "conflict";
-  filepath: string;
-  conflictFilepath: string;
+  conflictFile: string;
 }
 
-export interface Outdated {
-  type: "outdated";
-  filepath: string;
+export interface BadSync {
+  domain: "bad"
+  type: "bad-sync";
 }
 
 export interface ServerError {
+  domain: "bad"
   type: "server-error";
   error: unknown;
 }
 
-export interface Unauthenticated {
-  type: "unauthenticated";
-}
-
 export interface ClientError {
+  domain: "bad"
   type: "client-error";
   error: unknown;
 }
 
 export interface InSync {
-  type: "in-sync"
+  domain: "good"
+  type: "in-sync";
 }
 
 export type SyncResult = 
-  | Success
+  | Pushed
+  | Pulled
   | Conflict
-  | Outdated
+  | BadSync
   | ServerError
-  | Unauthenticated
   | ClientError
   | InSync

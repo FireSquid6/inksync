@@ -2,17 +2,12 @@ import { treaty, type Treaty } from "@elysiajs/eden";
 import { type App } from "../server/http";
 import { Store, type Update } from "../store";
 import path from "path";
-import fs from "fs";
-import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, LAST_SYNC_FILE, STORE_DATABASE_FILE } from "../constants";
+import { DELETED_HASH, MAX_FILE_SIZE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
-import type { UpdateResult } from "@/server/vault";
+import { hashBlob, type SuccessfulUpdate } from "@/server/vault";
+import type { Filesystem } from "@/filesystem";
 
-export interface VaultClient {
-  syncAll(): Promise<SyncResult[]>;
-  syncSpecificFile(filepath: string): Promise<SyncResult>;
-  // TODO - forceRollbackToServer(filepath: string)
-}
 
 class HttpError {
   code: number;
@@ -24,168 +19,264 @@ class HttpError {
   }
 }
 
-export class DirectoryClient implements VaultClient {
-  private rootDirectory: string;
-  private url: string;
+export class VaultClient {
+  private fs: Filesystem;
   private api: Treaty.Create<App>;
   private store: Store;
+  private url: string;
   vault: string;
 
-  constructor(rootDirectory: string, address: string, vault: string) {
-    this.url = getUrlFromAddress(address);
-    this.rootDirectory = rootDirectory;
-    this.api = treaty<App>(this.url);
+
+  constructor(address: string, store: Store, fs: Filesystem, vault: string) {
+    this.fs = fs;
     this.vault = vault;
+    this.url = getUrlFromAddress(address);
 
-
-    const inksyncPath = path.join(rootDirectory, INKSYNC_DIRECTORY_NAME);
-    fs.mkdirSync(inksyncPath, { recursive: true });
-    const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
-    this.store = new Store(dbPath);
+    this.api = treaty<App>(this.url);
+    this.store = store;
   }
 
   async syncAll(): Promise<SyncResult[]> {
-    const lastFullSync = this.getLastFullSync();
-
-    const updatedSince = await this.api.vaults({ vault: this.vault }).updates.get({
-      query: {
-        since: lastFullSync,
+    return [
+      {
+        domain: "bad",
+        type: "client-error",
+        error: "Sync all isn't implemented yet",
       }
-    });
+    ]
 
-    if (updatedSince.status !== 200 || updatedSince.data === null) {
-      return [makeError(updatedSince.status, updatedSince.error)];
+  }
+  async syncFile(filepath: string): Promise<SyncResult> {
+    try {
+      const size = await this.fs.sizeOf(filepath);
+      if (size > MAX_FILE_SIZE) {
+        return {
+          domain: "bad",
+          type: "client-error",
+          error: `File is ${size} bytes which is too large (${MAX_FILE_SIZE}) needed`,
+        }
+      }
+
+      const clientUpdate = this.store.getRecord(filepath) ?? "UNTRACKED";
+      const serverUpdate = await this.getServerUpdate(filepath);
+      const isModified = await this.isFileModified(filepath, clientUpdate);
+      const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
+
+      // client doesn't even remotely match server. Need to treat this as a conflict
+      if (syncStatus === "fucked") {
+        return {
+          domain: "bad",
+          type: "bad-sync",
+        }
+      }
+
+      switch ([isModified, syncStatus === "out-of-sync"]) {
+        case [true, true]:
+          if (serverUpdate === "UNTRACKED") {
+            return {
+              domain: "bad",
+              type: "client-error",
+              error: "Ended up in a state where a server update was untracked but there was a conflict. This should be impossible",
+            }
+          }
+
+          const newFp = await this.resolveConflict(filepath, serverUpdate)
+          return {
+            domain: "good",
+            type: "conflict",
+            conflictFile: newFp,
+          }
+        case [false, true]:
+          if (serverUpdate === "UNTRACKED") {
+            return {
+              type: "in-sync",
+              domain: "good",
+            }
+          }
+          await this.applyServerUpdate(serverUpdate);
+          return {
+            domain: "good",
+            type: "pulled",
+          }
+        case [true, false]:
+          // success! (push)
+          if (clientUpdate === "UNTRACKED") {
+            return {
+              type: "in-sync",
+              domain: "good",
+            }
+          }
+
+          const res = await this.pushFile(filepath, clientUpdate.hash);
+          this.store.updateRecord(filepath, res.newHash, res.time);
+          return {
+            domain: "good",
+            type: "pushed",
+          }
+        default:
+          // [false, false]
+          // this just means there's no change
+          return {
+            domain: "good",
+            type: "in-sync",
+          }
+      }
+
+
+    } catch (e) {
+      if (e instanceof HttpError) {
+        return makeError(e.code, e.error);
+      } else {
+        return {
+          domain: "bad",
+          type: "client-error",
+          error: e,
+        }
+      }
     }
 
-    const updated = updatedSince.data;
-    const changedFiles = this.getChangedFiles();
 
-    const filepathsToSync: { filepath: string, knownToBeUpdated: boolean | undefined, update: Update | undefined }[] = [];
-
-    updated.map((u) => filepathsToSync.push({ filepath: u.filepath, knownToBeUpdated: undefined, update: u }));
-    changedFiles.map((f) => filepathsToSync.push({ filepath: f, knownToBeUpdated: true, update: undefined }));
-
-    const result = await Promise.all(filepathsToSync.map(({ filepath, knownToBeUpdated }) => this.syncSpecificFile(filepath, knownToBeUpdated)));
-
-    this.setFullSync(Date.now());
-
-    return result;
+  }
+  peekAtFile(filepath: string): Promise<Blob> {
+    return this.fs.readFrom(filepath);
   }
 
-  async syncSpecificFile(filepath: string, isModified?: boolean, serverUpdate?: Update | "UNTRACKED"): Promise<SyncResult> {
+  private async resolveConflict(filepath: string, serverUpdate: Update) {
+    // move the file to its own thing
+    const extension = path.extname(filepath);
+    const ending = `${new Date().toUTCString()}.${extension}.conflict`;
+    const basename = path.basename(filepath, extension);
+    const dirname = path.dirname(filepath);
+
+    const newFilepath = path.join(dirname, `${basename}-${ending}`)
+    this.fs.copyTo(filepath, newFilepath);
+
+    await this.applyServerUpdate(serverUpdate)
+    return newFilepath;
   }
 
-  private async getChangedFiles(): Promise<string[]> {
-    // TODO
-    return [];
-  }
-
-  private async isModified(filepath: string, clientUpdate?: Update): Promise<boolean> {
-    // TODO
-    return true;
-  }
-
-  private async getServerUpdate(filepath: string): Promise<"UNTRACKED" | Update | HttpError> {
-    const r = await this.api
-      .vaults({ vault: this.vault })
-      .updates({ filepath: encodeFilepath(filepath) })
-      .get()
-
-    if (r.status !== 200 || r.data === null) {
-      return new HttpError(r.status, r.error);
+  private async applyServerUpdate(update: Update) {
+    const file = await this.getServerFile(update.filepath);
+    if (typeof file === "string") {
+      if (await this.fs.exists(update.filepath)) {
+        await this.fs.remove(update.filepath);
+      }
+    } else {
+      this.fs.writeTo(update.filepath, file);
     }
 
-    return r.data;
+    this.store.updateRecord(update.filepath, update.hash, update.time);
   }
 
-  private async pushUpdate(filepath: string, currentHash?: string): Promise<UpdateResult | HttpError> {
-    const absoluteFilepath = path.join(this.rootDirectory, filepath);
-    const file = Bun.file(absoluteFilepath);
-    let data: "DELETE" | File = "DELETE";
+  private async pushFile(filepath: string, hash: string): Promise<SuccessfulUpdate> {
+    let file: "DELETE" | File = "DELETE";
+    if (await this.fs.exists(filepath)) {
+      const blob = await this.fs.readFrom(filepath);
+      const filename = path.basename(filepath);
 
-    if (await file.exists()) {
-      const arrayBuffer = await file.arrayBuffer();
-      data = new File([arrayBuffer], filepath, { type: file.type });
-    }
-
-    if (!currentHash) {
-      const update = this.store.getRecord(filepath);
-      currentHash = update === null ? "" : update.hash;
+      file = new File([blob], filename, { type: blob.type, lastModified: Date.now() });
     }
 
     const res = await this.api
       .vaults({ vault: this.vault })
-      .files({filepath: encodeFilepath(filepath)})
+      .files({ filepath: encodeFilepath(filepath) })
       .post({
-        file: data,
-        currentHash: currentHash,
-      });
+        currentHash: hash,
+        file,
+      })
 
     if (res.status !== 200 || res.data === null) {
-      return new HttpError(res.status, res.error);
+      throw makeError(res.status, res.error);
     }
 
     return res.data;
   }
 
+  private async getServerUpdate(filepath: string): Promise<"UNTRACKED" | Update> {
+    const res = await this.api
+      .vaults({ vault: this.vault })
+      .updates({ filepath: encodeFilepath(filepath) })
+      .get();
 
-  private getLastFullSync(): number {
-    const syncPath = path.join(this.rootDirectory, INKSYNC_DIRECTORY_NAME, LAST_SYNC_FILE);
-    if (!fs.existsSync(syncPath)) {
-      return 0;
+    if (res.status !== 200 || res.data === null) {
+      throw makeError(res.status, res.error);
     }
 
-    const text = fs.readFileSync(syncPath).toString();
-    const number = parseInt(text);
+    return res.data
+  }
 
-    if (isNaN(number)) {
-      fs.rmSync(syncPath);
-      return 0;
+  private async getServerFile(filepath: string): Promise<Blob | "DELETED" | "NON-EXISTANT"> {
+    const res = await this.api
+      .vaults({ vault: this.vault })
+      .files({ filepath: encodeFilepath(filepath) })
+      .get();
+
+    if (res.status !== 200 || res.data === null) {
+      throw makeError(res.status, res.error);
     }
-    return number;
+
+    return res.data;
   }
 
-  private setFullSync(time: number) {
-    const syncPath = path.join(this.rootDirectory, INKSYNC_DIRECTORY_NAME, LAST_SYNC_FILE);
-    fs.writeFileSync(syncPath, time.toString());
+  private async isFileModified(filepath: string, clientUpdate: Update | "UNTRACKED"): Promise<boolean> {
+    const blob = await this.fs.readFrom(filepath);
+    const hash = hashBlob(blob);
+
+    if (clientUpdate === "UNTRACKED") {
+      return hash !== DELETED_HASH;
+    }
+
+    return hash !== clientUpdate.hash;
   }
 
+  private getSyncStatus(clientUpdate: Update | "UNTRACKED", serverUpdate: Update | "UNTRACKED"): "in-sync" | "out-of-sync" | "fucked" {
+    if (clientUpdate === "UNTRACKED" || serverUpdate === "UNTRACKED") {
+      switch ([clientUpdate === "UNTRACKED", serverUpdate === "UNTRACKED"]) {
+        case [true, true]:
+          return "in-sync";
+        case [true, false]:
+          return "fucked";
+        case [false, true]:
+          return "out-of-sync";
+      }
+    }
+
+    // we know that neither are "UNTRACKED"
+    clientUpdate = clientUpdate as Update;
+    serverUpdate = serverUpdate as Update;
+
+    // client should never be newer than server!
+    if (clientUpdate.time > serverUpdate.time) {
+      return "fucked";
+    }
+
+    return clientUpdate.hash === serverUpdate.hash ? "in-sync" : "out-of-sync";
+
+  }
 }
+
 
 function getUrlFromAddress(address: string) {
   const split = address.split(":");
 
   const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" ? "ws" : "wss";
 
-  return `${protocol}://${address}/listen`
+  return `${protocol}://${address}/listen`;
 }
-
-
 
 function makeError(status: number, error: unknown): SyncResult {
   if (status >= 500) {
     return {
+      domain: "bad",
       type: "server-error",
       error,
     }
   } else {
     return {
+      domain: "bad",
       type: "client-error",
       error,
     }
   }
 }
 
-async function getFileHash(filepath: string): string {
-
-
-  if (!fs.existsSync(filepath)) {
-    return DELETED_HASH;
-  }
-
-  const hash = new Bun.CryptoHasher("sha256");
-  const stream = fs.createReadStream()
-
-
-  return hash.digest("base64url");
-}
