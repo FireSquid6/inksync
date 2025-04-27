@@ -2,9 +2,6 @@ import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
 import { DirectoryVault, type FailedUpdate, type SuccessfulUpdate } from "../server/vault";
 import path from "path";
-import fs from "fs";
-import { Readable } from "stream";
-import { streamToString } from "@/encode";
 
 
 test("pushing updates", async () => {
@@ -21,21 +18,21 @@ test("pushing updates", async () => {
   `;
 
   // get a file
-  const res1 = vault.getCurrent(filepath);
+  const res1 = await vault.getCurrent(filepath);
   expect(res1).toBe("NON-EXISTANT");
 
   // create a file
-  const contents = Readable.from(contentsString);
+  const contents = new Blob([contentsString]);
   let updateRes = await vault.pushUpdate(contents, filepath, "");
   expect(updateRes.type).toBe("success");
   updateRes = updateRes as SuccessfulUpdate;
 
   // get status of that file
-  let res2 = vault.getCurrent(filepath);
+  let res2 = await vault.getCurrent(filepath);
   expect(typeof res2).not.toBe("string");
-  res2 = res2 as fs.ReadStream; 
+  res2 = res2 as Blob;
 
-  const text = await streamToString(res2);
+  const text = await res2.text();
   expect(text).toBe(contentsString);
 
 
@@ -44,7 +41,7 @@ test("pushing updates", async () => {
   expect(deleteRes.type).toBe("success");
 
   // get status of that file
-  const res3 = vault.getCurrent(filepath);
+  const res3 = await vault.getCurrent(filepath);
   expect(res3).toBe("DELETED");
 })
 
@@ -68,8 +65,8 @@ test("tracking updates", async () => {
   }
   `;
 
-  const contents1 = Readable.from(contentsString1);
-  const contents2 = Readable.from(contentsString2);
+  const contents1 = new Blob([contentsString1]);
+  const contents2 = new Blob([contentsString2]);
   const vault = new DirectoryVault("vault", dir);
   const filepath = "students/jdeiss/information.json";
 
@@ -82,13 +79,13 @@ test("tracking updates", async () => {
   secondUpdate = secondUpdate as SuccessfulUpdate;
 
   expect(firstUpdate.newHash).not.toBe(secondUpdate.newHash);
-  const file = vault.getCurrent(filepath);
+  const file = await vault.getCurrent(filepath);
 
   if (typeof file === "string") {
     throw new Error(`Got ${file} instead of a file`);
   }
 
-  const text = await streamToString(file);
+  const text = await file.text();
 
   expect(text).toBe(contentsString2);
 })
@@ -104,8 +101,8 @@ test("tracking updates that are the same", async () => {
   `;
 
   // readable is consumed!
-  const contents1 = Readable.from(contentsString);
-  const contents2 = Readable.from(contentsString);
+  const contents1 = new Blob([contentsString]);
+  const contents2 = new Blob([contentsString]);
 
   const vault = new DirectoryVault("vault", dir);
   const filepath = "students/jdeiss/information.json";
@@ -123,8 +120,8 @@ test("tracking updates that are the same", async () => {
 
 test("making bad updates", async () => {
   const dir = path.join(testdir, "test-vault4");
-  const firstWriteAttempt = Readable.from("hello!");
-  const secondWriteAttempt = Readable.from("goodbye!");
+  const firstWriteAttempt = new Blob(["hello!"]);
+  const secondWriteAttempt = new Blob(["goodbye!"]);
   const vault = new DirectoryVault("vault", dir);
   const filepath = "message.txt";
   

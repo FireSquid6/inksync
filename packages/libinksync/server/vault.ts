@@ -38,10 +38,12 @@ export class DirectoryVault implements Vault {
     const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
     const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
     this.name = name;
-    this.store = new Store(dbPath);
     this.directory = directory;
 
     this.fs = new DirectoryFilesystem(this.directory);
+    this.fs.mkdir(path.dirname(dbPath));
+
+    this.store = new Store(dbPath);
   }
 
   getName() {

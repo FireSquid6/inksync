@@ -10,6 +10,7 @@ export interface Filesystem {
   listdir(filepath: string, recursive?: boolean): Promise<string[]>;
   isDir(filepath: string): Promise<boolean>;
   copyTo(src: string, dest: string): Promise<void>;
+  mkdir(dirpath: string): void;
 }
 
 
@@ -18,6 +19,10 @@ export class DirectoryFilesystem implements Filesystem {
   constructor(root: string) {
     this.root = root;
     fs.mkdirSync(root, { recursive: true });
+  }
+
+  mkdir(dirpath: string) {
+    fs.mkdirSync(dirpath, { recursive: true });
   }
 
   async readFrom(filepath: string): Promise<Blob> {
