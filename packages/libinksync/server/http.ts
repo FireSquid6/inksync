@@ -44,7 +44,11 @@ export const app = new Elysia()
     const fp = decodeFilepath(filepath);
 
     const result = await vault.getCurrent(fp);
-    return result;
+    if (typeof result === "string") {
+      return result;
+    } 
+
+    return await result.arrayBuffer();
   }, {
     params: t.Object({
       vault: t.String(),
@@ -96,12 +100,12 @@ export type App = typeof app;
 export async function startAppWithVaults(vaults: Vault[], port: number): Promise<App> {
   await new Promise<void>((resolve) => {
     app.store.vaults = vaults;
-    app.use(Logestic.preset("common"))
+    app.use(Logestic.preset("common"));
     app.listen(port, () => {
       console.log(`Server started on localhost:${port}`);
       resolve()
     });
-  })
+  });
 
   return app;
 }

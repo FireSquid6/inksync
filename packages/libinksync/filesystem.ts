@@ -3,7 +3,7 @@ import fs from "fs";
 
 export interface Filesystem {
   readFrom(filepath: string): Promise<Blob>;
-  writeTo(filepath: string, data: string | Blob): Promise<void>;
+  writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void>;
   remove(filepath: string): Promise<void>;
   exists(filepath: string): Promise<boolean>;
   sizeOf(filepath: string): Promise<number>;  // size in bytes
@@ -31,11 +31,17 @@ export class DirectoryFilesystem implements Filesystem {
     return new Blob([buffer]);
   }
 
-  async writeTo(filepath: string, data: string | Blob): Promise<void> {
+  async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
     const fp = path.join(this.root, filepath);
     const dir = path.dirname(fp);
     
     fs.mkdirSync(dir, { recursive: true });
+
+    if (data instanceof ArrayBuffer) {
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(fp, buffer);
+      return;
+    }
 
     if (typeof data === "string") {
       fs.writeFileSync(fp, data);
@@ -56,6 +62,9 @@ export class DirectoryFilesystem implements Filesystem {
   }
 
   async sizeOf(filepath: string): Promise<number> {
+    if (!fs.existsSync(filepath)) {
+      return 0;
+    }
     const fp = path.join(this.root, filepath);
     const stats = fs.statSync(fp);
     return stats.size;

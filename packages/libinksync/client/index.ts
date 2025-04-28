@@ -47,10 +47,13 @@ export class VaultClient {
     ]
 
   }
-  async syncServerUpdated(): Promise<SyncResult[]> {
+  async syncServerUpdated(): Promise<[string, SyncResult][]> {
     const updates = await this.getFreshServerUpdates();
 
-    const results = await Promise.all(updates.map((u) => this.syncFile(u.filepath, u)));
+    const results = await Promise.all(updates.map(async (u): Promise<[string, SyncResult]> => {
+      return [u.filepath, await this.syncFile(u.filepath, u)];
+    }));
+
     await this.setLastServerPull(Date.now());
     return results;
   }
@@ -69,6 +72,8 @@ export class VaultClient {
       const serverUpdate = knownServerUpdate ?? await this.getServerUpdate(filepath);
       const isModified = await this.isFileModified(filepath, clientUpdate);
       const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
+      console.log("Initial fetch:");
+      console.log(isModified, syncStatus);
 
       // client doesn't even remotely match server. Need to treat this as a conflict
       if (syncStatus === "fucked") {
@@ -143,8 +148,6 @@ export class VaultClient {
         }
       }
     }
-
-
   }
   peekAtFile(filepath: string): Promise<Blob> {
     return this.fs.readFrom(filepath);
@@ -153,7 +156,7 @@ export class VaultClient {
   private async resolveConflict(filepath: string, serverUpdate: Update) {
     // move the file to its own thing
     const extension = path.extname(filepath);
-    const ending = `${new Date().toUTCString()}.${extension}.conflict`;
+    const ending = `${formatDate(Date.now())}.${extension}.conflict`;
     const basename = path.basename(filepath, extension);
     const dirname = path.dirname(filepath);
 
@@ -179,6 +182,7 @@ export class VaultClient {
 
   private async applyServerUpdate(update: Update) {
     const file = await this.getServerFile(update.filepath);
+    console.log("Got server file:", file);
     if (typeof file === "string") {
       if (await this.fs.exists(update.filepath)) {
         await this.fs.remove(update.filepath);
@@ -227,7 +231,7 @@ export class VaultClient {
     return res.data
   }
 
-  private async getServerFile(filepath: string): Promise<Blob | "DELETED" | "NON-EXISTANT"> {
+  private async getServerFile(filepath: string): Promise<ArrayBuffer | "DELETED" | "NON-EXISTANT"> {
     const res = await this.api
       .vaults({ vault: this.vault })
       .files({ filepath: encodeFilepath(filepath) })
@@ -237,10 +241,15 @@ export class VaultClient {
       throw makeError(res.status, res.error);
     }
 
+
     return res.data;
   }
 
   private async isFileModified(filepath: string, clientUpdate: Update | "UNTRACKED"): Promise<boolean> {
+    if (!(await this.fs.exists(filepath))) {
+      return false;
+    }
+
     const blob = await this.fs.readFrom(filepath);
     const hash = hashBlob(blob);
 
@@ -332,4 +341,12 @@ export function getDirectoryClient(vaultName: string, address: string, directory
   const store = new Store(dbPath);
 
   return new VaultClient(address, store, filesystem, vaultName);
+}
+
+function formatDate(date: Date | number): string {
+  if (typeof date === "number") {
+    date = new Date(date);
+  }
+
+  return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}-${date.getUTCDate()}-${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()}.${date.getUTCMilliseconds()}`;
 }
