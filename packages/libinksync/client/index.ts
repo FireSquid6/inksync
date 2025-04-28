@@ -72,8 +72,6 @@ export class VaultClient {
       const serverUpdate = knownServerUpdate ?? await this.getServerUpdate(filepath);
       const isModified = await this.isFileModified(filepath, clientUpdate);
       const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
-      console.log("Initial fetch:");
-      console.log(isModified, syncStatus);
 
       // client doesn't even remotely match server. Need to treat this as a conflict
       if (syncStatus === "fucked") {
@@ -85,7 +83,6 @@ export class VaultClient {
 
       if (isModified === true && syncStatus === "out-of-sync") {
         // conflict
-        console.log("Conflict!");
         if (serverUpdate === "UNTRACKED") {
           return {
             domain: "bad",
@@ -103,7 +100,6 @@ export class VaultClient {
 
       } else if (isModified) {
         // push to the server
-        console.log("Updates needed to be pushed");
 
         const hash = (typeof clientUpdate === "string") ? "" : clientUpdate.hash;
         const res = await this.pushFile(filepath, hash);
@@ -115,7 +111,6 @@ export class VaultClient {
 
       } else if (syncStatus === "out-of-sync") {
         // pull from server
-        console.log("Outdated, need to pull updates");
         if (serverUpdate === "UNTRACKED") {
           return {
             type: "in-sync",
@@ -130,7 +125,6 @@ export class VaultClient {
 
       }
 
-      console.log("no change detected");
       return {
         domain: "good",
         type: "in-sync",
@@ -182,7 +176,6 @@ export class VaultClient {
 
   private async applyServerUpdate(update: Update) {
     const file = await this.getServerFile(update.filepath);
-    console.log("Got server file:", file);
     if (typeof file === "string") {
       if (await this.fs.exists(update.filepath)) {
         await this.fs.remove(update.filepath);

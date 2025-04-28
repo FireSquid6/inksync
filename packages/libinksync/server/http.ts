@@ -80,7 +80,6 @@ export const app = new Elysia()
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
     if (vault === undefined) {
-      console.log(`Vault of name ${vaultName} not found`);
       return ctx.error(404, `Vault ${vaultName} not found`);
     }
     const fp = decodeFilepath(filepath);
