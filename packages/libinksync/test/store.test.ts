@@ -1,4 +1,4 @@
-import { Store } from "../store";
+import { Store } from "@/store";
 import { expect, test } from "bun:test";
 import { testdir } from "./setup.test";
 import path from "path";
