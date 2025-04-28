@@ -13,8 +13,9 @@
     "program": "bun run ./src/index.ts"
   },
   "dependencies": {
+    "@commander-js/extra-typings": "^13.1.0",
     "commander": "^13.1.0",
-    "zod": "^3.24.2",
-    "libinksync": "workspace:*"
+    "libinksync": "workspace:*",
+    "zod": "^3.24.2"
   }
 }

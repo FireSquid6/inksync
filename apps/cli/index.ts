@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command } from "@commander-js/extra-typings";
 import { startAppWithVaults } from "libinksync/server/http";
 import { DirectoryVault } from "libinksync/server/vault";
 import { getDirectoryClient } from "libinksync/client";
@@ -10,9 +10,6 @@ program
   .argument("<name>", "The name of the vault to use")
   .description("Starts the server")
   .action((name) => {
-    if (typeof name !== "string") {
-      throw new Error("Should've recieved string for vault name")
-    }
     const directory = process.cwd();
     const vault = new DirectoryVault(name, directory);
     startAppWithVaults([vault], 8700);
@@ -25,10 +22,6 @@ program
   .argument("<name>", "The name of the vault")
   .argument("<file>", "The file to sync")
   .action(async (address, name, file) => {
-    if (typeof address !== "string" || typeof name !== "string" || typeof file !== "string") {
-      throw new Error("Should've gotten string for address, name, and file");
-    }
-
     const directory = process.cwd();
     console.log(address, name, directory);
     const client = getDirectoryClient(name, address, directory);
