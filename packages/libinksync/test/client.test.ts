@@ -19,10 +19,12 @@ test("basic client update", async () => {
   fs.writeFileSync(newFilePath, "Hello, world!");
 
   const clientRes = await client.syncFile("my-file.txt");
-  expect(clientRes).toBe({ type: "pushed", domain: "good" });
+  expect(clientRes).toEqual({ type: "pushed", domain: "good" });
 
-  const file = await vault.getCurrent("my-file.txt");
-  expect(file.toString()).toBe("Hello, world!");
+  let file = await vault.getCurrent("my-file.txt");
+  expect(typeof file).not.toBe("string");
+  file = file as Blob
+  expect(await file.text()).toBe("Hello, world!");
 
   app.stop();
 });

@@ -78,56 +78,57 @@ export class VaultClient {
         }
       }
 
-      switch ([isModified, syncStatus === "out-of-sync"]) {
-        case [true, true]:
-          if (serverUpdate === "UNTRACKED") {
-            return {
-              domain: "bad",
-              type: "client-error",
-              error: "Ended up in a state where a server update was untracked but there was a conflict. This should be impossible",
-            }
+      if (isModified === true && syncStatus === "out-of-sync") {
+        // conflict
+        console.log("Conflict!");
+        if (serverUpdate === "UNTRACKED") {
+          return {
+            domain: "bad",
+            type: "client-error",
+            error: "Ended up in a state where a server update was untracked but there was a conflict. This should be impossible",
           }
+        }
 
-          const newFp = await this.resolveConflict(filepath, serverUpdate)
-          return {
-            domain: "good",
-            type: "conflict",
-            conflictFile: newFp,
-          }
-        case [false, true]:
-          if (serverUpdate === "UNTRACKED") {
-            return {
-              type: "in-sync",
-              domain: "good",
-            }
-          }
-          await this.applyServerUpdate(serverUpdate);
-          return {
-            domain: "good",
-            type: "pulled",
-          }
-        case [true, false]:
-          // success! (push)
-          if (clientUpdate === "UNTRACKED") {
-            return {
-              type: "in-sync",
-              domain: "good",
-            }
-          }
+        const newFp = await this.resolveConflict(filepath, serverUpdate)
+        return {
+          domain: "good",
+          type: "conflict",
+          conflictFile: newFp,
+        }
 
-          const res = await this.pushFile(filepath, clientUpdate.hash);
-          this.store.updateRecord(filepath, res.newHash, res.time);
+      } else if (isModified) {
+        // push to the server
+        console.log("Updates needed to be pushed");
+
+        const hash = (typeof clientUpdate === "string") ? "" : clientUpdate.hash;
+        const res = await this.pushFile(filepath, hash);
+        this.store.updateRecord(filepath, res.newHash, res.time);
+        return {
+          domain: "good",
+          type: "pushed",
+        }
+
+      } else if (syncStatus === "out-of-sync") {
+        // pull from server
+        console.log("Outdated, need to pull updates");
+        if (serverUpdate === "UNTRACKED") {
           return {
-            domain: "good",
-            type: "pushed",
-          }
-        default:
-          // [false, false]
-          // this just means there's no change
-          return {
-            domain: "good",
             type: "in-sync",
+            domain: "good",
           }
+        }
+        await this.applyServerUpdate(serverUpdate);
+        return {
+          domain: "good",
+          type: "pulled",
+        }
+
+      }
+
+      console.log("no change detected");
+      return {
+        domain: "good",
+        type: "in-sync",
       }
 
 

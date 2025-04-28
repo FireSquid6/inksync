@@ -75,7 +75,6 @@ export const app = new Elysia()
   .get("/vaults/:vault/updates/:filepath", (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
-    console.log(ctx.store.vaults);
     if (vault === undefined) {
       console.log(`Vault of name ${vaultName} not found`);
       return ctx.error(404, `Vault ${vaultName} not found`);
