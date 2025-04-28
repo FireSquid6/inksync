@@ -60,7 +60,7 @@ export class Store {
   getRecordsNewThan(timestamp: number): Update[] {
     const result = this.db.query(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
-      WHERE last_updated > ?;
+      WHERE time > ?;
     `).all(timestamp);
 
     const updates = z.array(updateSchema).parse(result);

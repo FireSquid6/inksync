@@ -2,11 +2,12 @@ import { treaty, type Treaty } from "@elysiajs/eden";
 import { type App } from "../server/http";
 import { Store, type Update } from "../store";
 import path from "path";
-import { DELETED_HASH, MAX_FILE_SIZE } from "../constants";
+import fs from "fs"
+import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
 import { hashBlob, type SuccessfulUpdate } from "@/server/vault";
-import type { Filesystem } from "@/filesystem";
+import { DirectoryFilesystem, type Filesystem } from "@/filesystem";
 
 
 class HttpError {
@@ -46,7 +47,14 @@ export class VaultClient {
     ]
 
   }
-  async syncFile(filepath: string): Promise<SyncResult> {
+  async syncServerUpdated(): Promise<SyncResult[]> {
+    const updates = await this.getFreshServerUpdates();
+
+    const results = await Promise.all(updates.map((u) => this.syncFile(u.filepath, u)));
+    await this.setLastServerPull(Date.now());
+    return results;
+  }
+  async syncFile(filepath: string, knownServerUpdate?: Update): Promise<SyncResult> {
     try {
       const size = await this.fs.sizeOf(filepath);
       if (size > MAX_FILE_SIZE) {
@@ -58,7 +66,7 @@ export class VaultClient {
       }
 
       const clientUpdate = this.store.getRecord(filepath) ?? "UNTRACKED";
-      const serverUpdate = await this.getServerUpdate(filepath);
+      const serverUpdate = knownServerUpdate ?? await this.getServerUpdate(filepath);
       const isModified = await this.isFileModified(filepath, clientUpdate);
       const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
 
@@ -153,6 +161,19 @@ export class VaultClient {
 
     await this.applyServerUpdate(serverUpdate)
     return newFilepath;
+  }
+
+  private async getFreshServerUpdates(): Promise<Update[]> {
+    const lastUpdate = await this.getLastServerPull();
+    const res = await this.api
+      .vaults({ vault: this.vault })
+      .updates.get({ query: { since: lastUpdate } });
+
+    if (res.status !== 200 || res.data === null) {
+      throw makeError(res.status, res.error);
+    }
+
+    return res.data;
   }
 
   private async applyServerUpdate(update: Update) {
@@ -251,7 +272,28 @@ export class VaultClient {
     }
 
     return clientUpdate.hash === serverUpdate.hash ? "in-sync" : "out-of-sync";
+  }
 
+  private async setLastServerPull(t: number): Promise<void> {
+    const filepath = path.join(INKSYNC_DIRECTORY_NAME, "last-pull.timestamp");
+    return this.fs.writeTo(filepath, t.toString());
+  }
+
+  private async getLastServerPull(): Promise<number> {
+    const filepath = path.join(INKSYNC_DIRECTORY_NAME, "last-pull.timestamp");
+
+    if (!(await this.fs.exists(filepath))) {
+      return 0;
+    }
+
+    const text = (await this.fs.readFrom(filepath)).toString();
+    const num = parseInt(text);
+
+    if (isNaN(num)) {
+      throw new Error(`Failed to parse number in last-pull.timestamp`);
+    }
+
+    return num;
   }
 }
 
@@ -259,9 +301,9 @@ export class VaultClient {
 function getUrlFromAddress(address: string) {
   const split = address.split(":");
 
-  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" ? "ws" : "wss";
+  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" ? "http" : "https";
 
-  return `${protocol}://${address}/listen`;
+  return `${protocol}://${address}`;
 }
 
 function makeError(status: number, error: unknown): SyncResult {
@@ -280,3 +322,13 @@ function makeError(status: number, error: unknown): SyncResult {
   }
 }
 
+
+export function getDirectoryClient(vaultName: string, address: string, directory: string) {
+  const filesystem = new DirectoryFilesystem(directory);
+  const dbPath = path.join(directory, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE);
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+  const store = new Store(dbPath);
+
+  return new VaultClient(address, store, filesystem, vaultName);
+}

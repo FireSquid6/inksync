@@ -1,41 +1,40 @@
 import { Command } from "commander";
-import { startApp } from "inksync-sdk/server";
-import { InksyncConnection, DirectoryStore } from "inksync-sdk/client";
+import { startAppWithVaults } from "libinksync/server/http";
+import { DirectoryVault } from "libinksync/server/vault";
+import { getDirectoryClient } from "libinksync/client";
 
 const program = new Command();
 
 program
   .command("start")
+  .argument("<name>", "The name of the vault to use")
   .description("Starts the server")
-  .action(() => {
+  .action((name) => {
+    if (typeof name !== "string") {
+      throw new Error("Should've recieved string for vault name")
+    }
     const directory = process.cwd();
-    startApp(directory);
+    const vault = new DirectoryVault(name, directory);
+    startAppWithVaults([vault], 8700);
   });
 
 program
-  .command("sync")
+  .command("sync-file")
   .description("Connects to a server and syncs")
   .argument("<address>", "The address of the server")
-  .action(async (address) => {
-    const directory = process.cwd();
-    const connection = new InksyncConnection(address);
-
-    await connection.waitForConnection();
-
-    const res = await connection.sendAndRecieve({
-      type: "AUTHENTICATE",
-      token: "token1",
-    })
-
-    if (res.type !== "AUTHENTICATED") {
-      console.log("Failed to authenticated. Got message:")
-      console.log(res);
-      return;
+  .argument("<name>", "The name of the vault")
+  .argument("<file>", "The file to sync")
+  .action(async (address, name, file) => {
+    if (typeof address !== "string" || typeof name !== "string" || typeof file !== "string") {
+      throw new Error("Should've gotten string for address, name, and file");
     }
 
-    const store = new DirectoryStore(directory, connection);
+    const directory = process.cwd();
+    console.log(address, name, directory);
+    const client = getDirectoryClient(name, address, directory);
+    const res = await client.syncFile(file);
 
-    store.syncAll();
+    console.log(res);
   });
 
 
