@@ -10,7 +10,7 @@ import { hashBlob, type SuccessfulUpdate } from "@/server/vault";
 import { DirectoryFilesystem, type Filesystem } from "@/filesystem";
 
 
-class HttpError {
+export class HttpError {
   code: number;
   error: unknown;
 

@@ -1,7 +1,5 @@
 import { Command } from "@commander-js/extra-typings";
-import { startAppWithVaults } from "libinksync/server/http";
-import { DirectoryVault } from "libinksync/server/vault";
-import { getDirectoryClient } from "libinksync/client";
+import { startAppWithVaults, DirectoryVault, getDirectoryClient } from "libinksync";
 
 const program = new Command();
 
