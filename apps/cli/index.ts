@@ -1,34 +1,58 @@
 import { Command } from "@commander-js/extra-typings";
-import { startAppWithVaults, DirectoryVault, getDirectoryClient } from "libinksync";
+import path from "path";
+import fs from "fs";
+import YAML from "yaml";
+import { serverConfigSchema, startServer } from "./server";
+// import { startAppWithVaults, DirectoryVault, getDirectoryClient } from "libinksync";
 
-const program = new Command();
+const server = new Command()
+  .name("server")
 
-program
+server
   .command("start")
-  .argument("<name>", "The name of the vault to use")
-  .description("Starts the server")
-  .action((name) => {
-    const directory = process.cwd();
-    const vault = new DirectoryVault(name, directory);
-    startAppWithVaults([vault], 8700);
-  });
+  .description("Starts an inksync server with the provided config file")
+  .option("-c, --config [directory]", "the directory to start the server in. Defaults to ${cwd}/inksync-server.conf")
+  .action(({ config: configPath }) => {
+    if (typeof configPath === "boolean" || configPath === undefined) {
+      configPath = path.join(process.cwd(), "inksync.config.yaml");
+    }
 
-program
-  .command("sync-file")
+    if (!fs.existsSync(configPath)) {
+      console.error(`Error: config path ${configPath} not found`);
+      return;
+    }
+    try {
+      const text = fs.readFileSync(configPath).toString();
+      const yaml = YAML.parse(text);
+      const parsed = serverConfigSchema.parse(yaml);
+      startServer(parsed);
+    } catch (e) {
+      e = e as Error;
+      console.error("Error reading config:")
+      console.error(e);
+    }
+  })
+
+const sync = new Command()
+  .name("sync")
+
+sync
+  .command("init")
   .description("Connects to a server and syncs")
   .argument("<address>", "The address of the server")
   .argument("<name>", "The name of the vault")
-  .argument("<file>", "The file to sync")
-  .action(async (address, name, file) => {
-    const directory = process.cwd();
-    console.log(address, name, directory);
-    const client = getDirectoryClient(name, address, directory);
-    const res = await client.syncFile(file);
-
-    console.log(res);
+  .action(async (address, name ) => {
+    console.log("initializing with", address, name);
   });
 
+sync
+  .command("info")
+  .description
 
+const program = new Command()
+
+program.addCommand(sync);
+program.addCommand(server);
 
 export async function runCli() {
   await program.parseAsync();
