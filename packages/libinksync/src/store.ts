@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Database } from "bun:sqlite";
+import Sqlite from "better-sqlite3";
 
 const TABLE_NAME = "updates";
 
@@ -11,11 +11,12 @@ export const updateSchema = z.object({
 export type Update = z.infer<typeof updateSchema>;
 
 export class Store {
-  private db: Database;
+  private db: Sqlite.Database;
 
   constructor(dbFile: string) {
-    this.db = new Database(dbFile);
-    this.db.query(`
+    this.db = Sqlite(dbFile);
+    this.db.pragma("journal_mode = WAL")
+    this.db.prepare(`
       CREATE TABLE IF NOT EXISTS ${TABLE_NAME}(
         filepath TEXT PRIMARY KEY, 
         hash TEXT, 
@@ -25,7 +26,7 @@ export class Store {
   }
 
   updateRecord(filepath: string, hash: string, time: number) {
-    const result = this.db.query(`
+    const result = this.db.prepare(`
       INSERT OR REPLACE INTO ${TABLE_NAME} (filepath, hash, time)
       VALUES (?, ?, ?)
     `).run(filepath, hash, time);
@@ -40,7 +41,7 @@ export class Store {
   }
 
   getRecord(filepath: string): Update | null {
-    const result = this.db.query(`
+    const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE filepath = ?;
     `).all(filepath);
@@ -58,7 +59,7 @@ export class Store {
   }
 
   getRecordsNewThan(timestamp: number): Update[] {
-    const result = this.db.query(`
+    const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE time > ?;
     `).all(timestamp);
@@ -68,7 +69,7 @@ export class Store {
   }
 
   getAllRecords(): Update[] {
-    const result = this.db.query(`
+    const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
     `).all();
     const updates = z.array(updateSchema).parse(result);
