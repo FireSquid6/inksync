@@ -25,11 +25,13 @@ export class VaultClient {
   private api: Treaty.Create<App>;
   private store: Store;
   private url: string;
-  vault: string;
+  private vault: string;
+  private address: string;
 
 
   constructor(address: string, store: Store, fs: Filesystem, vault: string) {
     this.fs = fs;
+    this.address = address;
     this.vault = vault;
     this.url = getUrlFromAddress(address);
 
@@ -37,15 +39,18 @@ export class VaultClient {
     this.store = store;
   }
 
-  async syncAll(): Promise<SyncResult[]> {
-    return [
-      {
-        domain: "bad",
-        type: "client-error",
-        error: "Sync all isn't implemented yet",
-      }
-    ]
+  getVault() {
+    return this.vault;
+  }
+  getAddress() {
+    return this.address;
+  }
 
+  async syncAll(): Promise<[string, SyncResult][]> {
+    const server = await this.syncServerUpdated();
+    const client = await this.syncClientUpdated();
+
+    return [...server, ...client];
   }
   async syncServerUpdated(): Promise<[string, SyncResult][]> {
     const updates = await this.getFreshServerUpdates();
@@ -57,6 +62,18 @@ export class VaultClient {
     await this.setLastServerPull(Date.now());
     return results;
   }
+  
+  async syncClientUpdated(): Promise<[string, SyncResult][]> {
+    return [
+      ["all", {
+        domain: "bad",
+        type: "client-error",
+        error: "Sync all isn't implemented yet",
+      }]
+    ]
+
+  }
+
   async syncFile(filepath: string, knownServerUpdate?: Update): Promise<SyncResult> {
     try {
       const size = await this.fs.sizeOf(filepath);
@@ -282,7 +299,7 @@ export class VaultClient {
     return this.fs.writeTo(filepath, t.toString());
   }
 
-  private async getLastServerPull(): Promise<number> {
+  async getLastServerPull(): Promise<number> {
     const filepath = path.join(INKSYNC_DIRECTORY_NAME, "last-pull.timestamp");
 
     if (!(await this.fs.exists(filepath))) {

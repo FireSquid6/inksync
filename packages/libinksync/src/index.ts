@@ -5,3 +5,4 @@ export * from "./server/vault";
 export * from "./store";
 export * from "./constants";
 export * from "./filesystem";
+export * from "./client/connectfile";

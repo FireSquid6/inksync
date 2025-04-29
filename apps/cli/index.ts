@@ -3,10 +3,11 @@ import path from "path";
 import fs from "fs";
 import YAML from "yaml";
 import { serverConfigSchema, startServer } from "./server";
-// import { startAppWithVaults, DirectoryVault, getDirectoryClient } from "libinksync";
+import { getClient, logResults, setConnectfile } from "./client";
 
 const server = new Command()
   .name("server")
+  .description("Subcommand for operating on the server")
 
 server
   .command("start")
@@ -35,19 +36,98 @@ server
 
 const sync = new Command()
   .name("sync")
+  .description("Subcomman for syncing to an existing server")
 
 sync
-  .command("init")
-  .description("Connects to a server and syncs")
+  .command("connect")
+  .description("Connects the current workind directory to a vault")
   .argument("<address>", "The address of the server")
   .argument("<name>", "The name of the vault")
   .action(async (address, name ) => {
-    console.log("initializing with", address, name);
+    // TODO - ping the address to confirm it works
+    const directory = process.cwd()
+    setConnectfile(directory, name, address);
+    console.log(`Setup ${directory} to connect to ${name}@${address}`)
   });
 
 sync
   .command("info")
-  .description
+  .description("Lists current info on the connected vault for this directory")
+  .action(async () => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const lastPullTimestamp = await client.getLastServerPull();
+    const date = new Date(lastPullTimestamp);
+
+    console.log(`${directory} <-> ${client.getVault()}@${client.getAddress()}`);
+    console.log(`Last full sync: ${date.toUTCString()}`);
+  });
+
+sync
+  .command("pull")
+  .description("Pulls all unknown changes from the server to this directory")
+  .action(async () => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const results = await client.syncServerUpdated();
+    logResults(results);
+  })
+
+sync
+  .command("all")
+  .description("Pulls and pushes all necessary updates to this directory")
+  .action(async () => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const results = await client.syncAll();
+    logResults(results);
+  })
+
+sync
+  .command("push")
+  .description("Pushes all changed files to this directory")
+  .action(async () => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const results = await client.syncClientUpdated();
+    logResults(results);
+  })
+
+sync
+  .command("file")
+  .description("Syncs a single file")
+  .argument("<file>", "The file to sync. Relative path to the current dir")
+  .action(async (file) => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const result = await client.syncFile(file);
+    logResult(result);
+  })
 
 const program = new Command()
 
