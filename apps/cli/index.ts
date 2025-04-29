@@ -36,7 +36,7 @@ server
 
 const sync = new Command()
   .name("sync")
-  .description("Subcomman for syncing to an existing server")
+  .description("Subcommand for syncing to an existing server")
 
 sync
   .command("connect")
