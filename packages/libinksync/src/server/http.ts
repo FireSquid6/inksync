@@ -1,10 +1,11 @@
-import { Elysia, t } from "elysia";
 import { type Vault } from "./vault";
 import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
+import { Elysia, t } from "elysia";
+import node from "@elysiajs/node";
 
 // TODO - encode and decode filepaths into base 64
-export const app = new Elysia()
+export const app = new Elysia({ adapter: node() })
   .state("vaults", [] as Vault[])
   .get("/vaults", (ctx) => {
     const names = ctx.store.vaults.map((v) => v.getName());
