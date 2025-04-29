@@ -2,6 +2,7 @@
 - authentication
 - file backups
 - transition libinksync to node
+- one-way vs two-way sync
 
 # Filesystems
 - aws filesystem
