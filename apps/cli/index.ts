@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import YAML from "yaml";
 import { serverConfigSchema, startServer } from "./server";
-import { getClient, logResults, setConnectfile } from "./client";
+import { getClient, logResults, logResult, setConnectfile } from "./client";
 
 const server = new Command()
   .name("server")
@@ -126,7 +126,7 @@ sync
     }
 
     const result = await client.syncFile(file);
-    logResult(result);
+    logResult(file, result);
   })
 
 const program = new Command()

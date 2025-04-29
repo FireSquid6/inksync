@@ -177,3 +177,6 @@ dist
 .direnv
 
 .inksync
+
+test-client
+test-server
