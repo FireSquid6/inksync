@@ -12,6 +12,10 @@
         nodejs_20
         flyctl
         typescript
+
+        # nativescript stuff
+        jdk17
+
       ];
     };
   };
