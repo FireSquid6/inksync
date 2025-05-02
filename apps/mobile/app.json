@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile-expo-app",
-    "slug": "mobile-expo-app",
+    "name": "inksync",
+    "slug": "inksync",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
