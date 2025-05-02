@@ -1,5 +1,5 @@
 import path from "path";
-import { BetterSqliteStore, type Store, type Update } from "../store";
+import { BunSqliteStore, type Store, type Update } from "../store";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
 import type { Filesystem } from "@/filesystem";
 import { DirectoryFilesystem } from "@/filesystem";
@@ -43,7 +43,7 @@ export class DirectoryVault implements Vault {
     this.fs = new DirectoryFilesystem(this.directory);
     this.fs.mkdir(path.dirname(dbPath));
 
-    this.store = new BetterSqliteStore(dbPath);
+    this.store = new BunSqliteStore(dbPath);
   }
 
   getName() {

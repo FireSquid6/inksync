@@ -1,13 +1,13 @@
-import { Store } from "@/store";
+import { BunSqliteStore } from "@/store";
 import { expect, test } from "bun:test";
 import { testdir } from "./setup.test";
 import path from "path";
 
-test("test the store", () => {
+test("test the store", async () => {
   const dbPath = path.join(testdir, "test.sqlite");
-  const store = new Store(dbPath);
+  const store = new BunSqliteStore(dbPath);
 
-  const startingUpdates = store.getAllRecords();
+  const startingUpdates = await store.getAllRecords();
 
   expect(startingUpdates.length).toBe(0);
 
@@ -17,7 +17,7 @@ test("test the store", () => {
 
 
   store.updateRecord(filepath, hash, time);
-  const record = store.getRecord(filepath);
+  const record = await store.getRecord(filepath);
 
   expect(record).not.toBe(null);
   expect(record!.time).toBe(time);
@@ -26,17 +26,17 @@ test("test the store", () => {
   const newHash = "12345678";
   const newTime = Date.now();
   store.updateRecord(filepath, newHash, newTime);
-  const newRecord = store.getRecord(filepath);
+  const newRecord = await store.getRecord(filepath);
 
   expect(newRecord).not.toBe(null);
   expect(newRecord!.time).toBe(newTime);
   expect(newRecord!.hash).toBe(newHash);
 
-  const secondUpdates = store.getAllRecords();
+  const secondUpdates = await store.getAllRecords();
   expect(secondUpdates.length).toBe(1);
 
   store.updateRecord("/another/thing.txt", "fjabewj", Date.now());
-  const thirdUpdates = store.getAllRecords();
+  const thirdUpdates = await store.getAllRecords();
   expect(thirdUpdates.length).toBe(2);
 
 });

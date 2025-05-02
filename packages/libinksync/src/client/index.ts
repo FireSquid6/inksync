@@ -1,6 +1,6 @@
 import { treaty, type Treaty } from "@elysiajs/eden";
 import { type App } from "../server/http";
-import { BetterSqliteStore, type Store, type Update } from "../store";
+import { BunSqliteStore, type Store, type Update } from "../store";
 import path from "path";
 import fs from "fs"
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
@@ -295,25 +295,11 @@ export class VaultClient {
   }
 
   private async setLastServerPull(t: number): Promise<void> {
-    const filepath = path.join(INKSYNC_DIRECTORY_NAME, "last-pull.timestamp");
-    return this.fs.writeTo(filepath, t.toString());
+    this.store.setLastPull(t);
   }
 
   async getLastServerPull(): Promise<number> {
-    const filepath = path.join(INKSYNC_DIRECTORY_NAME, "last-pull.timestamp");
-
-    if (!(await this.fs.exists(filepath))) {
-      return 0;
-    }
-
-    const text = (await this.fs.readFrom(filepath)).toString();
-    const num = parseInt(text);
-
-    if (isNaN(num)) {
-      throw new Error(`Failed to parse number in last-pull.timestamp`);
-    }
-
-    return num;
+    return await this.store.getLastPull();
   }
 }
 
@@ -348,7 +334,7 @@ export function getDirectoryClient(vaultName: string, address: string, directory
   const dbPath = path.join(directory, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  const store = new BetterSqliteStore(dbPath);
+  const store = new BunSqliteStore(dbPath);
 
   return new VaultClient(address, store, filesystem, vaultName);
 }
