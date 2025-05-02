@@ -14,11 +14,6 @@ export interface Connection {
   status: ConnectionStatus,
 }
 
-export interface ConnectionSyncResult {
-  timeStarted: Date,
-  syncResults: SyncResult[],
-  overall: "good" | "bad",
-}
 export type ConnectionStatus = "syncing" | "connected" | "disconnected";
 
 
