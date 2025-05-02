@@ -1,0 +1,10 @@
+{
+  "appId": "dev.inksync.app",
+  "appName": "inksync",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}
