@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { usePromise } from '../lib/async';
-import { getAllConnections } from '../lib/connection';
 import { ConnectionButton } from '../components/connection';
+import { useAtomValue } from 'jotai';
+import { connectionsAtom } from '../lib/connection';
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
@@ -29,13 +29,13 @@ function TopSection() {
 }
 
 function RouteComponent() {
-  const [loading, connections] = usePromise(getAllConnections());
+  const connections = useAtomValue(connectionsAtom)
 
   return (
     <div className="max-w-lg mx-auto bg-base-300 min-h-screen">
       <TopSection />
       <div className="p-4">
-        {loading ? <p>Loading...</p> : connections.map((c) => <ConnectionButton connection={c} status={"syncing"} />)}
+        {connections.map((c) => <ConnectionButton connection={c} status={"syncing"} />)}
       </div>
     </div>
   )

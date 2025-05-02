@@ -17,10 +17,11 @@
     "@tanstack/react-router-devtools": "^1.119.1",
     "@tanstack/router-plugin": "^1.119.0",
     "daisyui": "^5.0.35",
+    "jotai": "^2.12.3",
+    "libinksync": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwindcss": "^4.1.5",
-    "libinksync": "workspace:*"
+    "tailwindcss": "^4.1.5"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.2.0",

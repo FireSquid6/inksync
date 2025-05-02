@@ -10,15 +10,22 @@ export function ConnectionButton({ connection, status }: { connection: Connectio
           <div className="text-sm text-gray-400">
             <p>Directory: {connection.syncDirectory}</p>
             <p>Address: {connection.address}</p>
-            <p>Last sync: {formatDate(connection.lastSync)}</p>
+            <p>Last sync: {formatDate(connection.lastSync.time)}</p>
             <p>Status: {status}</p>
           </div>
         </div>
-        <button
-          className="btn btn-primary btn-outline"
-        >
-          View Details
-        </button>
+        <div className="flex flex-row gap-3">
+          <button
+            className="btn btn-primary btn-outline"
+          >
+            Details
+          </button>
+          <button
+            className="btn btn-primary"
+          >
+            Sync
+          </button>
+        </div>
       </div>
     </div>
   )
