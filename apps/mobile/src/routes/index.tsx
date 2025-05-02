@@ -35,7 +35,7 @@ function RouteComponent() {
     <div className="max-w-lg mx-auto bg-base-300 min-h-screen">
       <TopSection />
       <div className="p-4">
-        {loading ? <p>Loading...</p> : connections.map((c) => <ConnectionButton connection={c} />)}
+        {loading ? <p>Loading...</p> : connections.map((c) => <ConnectionButton connection={c} status={"syncing"} />)}
       </div>
     </div>
   )

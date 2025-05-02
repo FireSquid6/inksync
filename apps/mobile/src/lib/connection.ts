@@ -1,4 +1,4 @@
-
+import type { SyncResult } from "libinksync";
 
 export interface Connection {
   id: number,
@@ -8,6 +8,12 @@ export interface Connection {
   lastSync: Date,
 }
 
+export interface ConnectionSyncResult {
+  id: number,
+  syncResults: SyncResult[],
+  overall: "good" | "bad",
+}
+export type ConnectionStatus = "syncing" | "connected" | "disconnected";
 
 
 export async function getAllConnections(): Promise<Connection[]> {

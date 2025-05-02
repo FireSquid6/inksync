@@ -1,6 +1,7 @@
-import { Connection } from "../lib/connection";
+import { Connection, ConnectionStatus } from "../lib/connection";
 
-export function ConnectionButton({ connection }: { connection: Connection }) {
+export function ConnectionButton({ connection, status }: { connection: Connection, status: ConnectionStatus }) {
+  // TODO - change color for status
   return (
     <div className="bg-base-100 rounded-lg shadow-sm mb-3 p-4">
       <div className="flex justify-between items-start">
@@ -10,6 +11,7 @@ export function ConnectionButton({ connection }: { connection: Connection }) {
             <p>Directory: {connection.syncDirectory}</p>
             <p>Address: {connection.address}</p>
             <p>Last sync: {formatDate(connection.lastSync)}</p>
+            <p>Status: {status}</p>
           </div>
         </div>
         <button
