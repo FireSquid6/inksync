@@ -12,6 +12,9 @@
   "dependencies": {
     "@capacitor/android": "^7.2.0",
     "@capacitor/core": "^7.2.0",
+    "@tanstack/react-router": "^1.119.0",
+    "@tanstack/react-router-devtools": "^1.119.1",
+    "@tanstack/router-plugin": "^1.119.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
