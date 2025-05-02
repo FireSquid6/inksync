@@ -40,3 +40,17 @@ test("test the store", async () => {
   expect(thirdUpdates.length).toBe(2);
 
 });
+
+test("store store time", async () => {
+  const dbPath = path.join(testdir, "test2.sqlite");
+  const store = new BunSqliteStore(dbPath);
+
+  const first = await store.getLastPull();
+
+  expect(first).toBe(0);
+
+  await store.setLastPull(102);
+  const second = await store.getLastPull();
+
+  expect(second).toBe(102);
+});
