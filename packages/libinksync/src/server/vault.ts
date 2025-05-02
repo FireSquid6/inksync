@@ -1,5 +1,5 @@
 import path from "path";
-import { Store, type Update } from "../store";
+import { BetterSqliteStore, type Store, type Update } from "../store";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
 import type { Filesystem } from "@/filesystem";
 import { DirectoryFilesystem } from "@/filesystem";
@@ -20,8 +20,8 @@ export type UpdateResult = SuccessfulUpdate | FailedUpdate
 export interface Vault {
   pushUpdate(fileContents: Blob | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
   getCurrent(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | Blob>;
-  getUpdateFor(filepath: string): Update | null;
-  getUpdatesSince(time: number): Update[]; 
+  getUpdateFor(filepath: string): Promise<Update | null>;
+  getUpdatesSince(time: number): Promise<Update[]>; 
   getName(): string;
   isAuthorized(token: string): Promise<boolean>;
 }
@@ -43,7 +43,7 @@ export class DirectoryVault implements Vault {
     this.fs = new DirectoryFilesystem(this.directory);
     this.fs.mkdir(path.dirname(dbPath));
 
-    this.store = new Store(dbPath);
+    this.store = new BetterSqliteStore(dbPath);
   }
 
   getName() {
@@ -54,14 +54,14 @@ export class DirectoryVault implements Vault {
     return true;
   }
 
-  getUpdateFor(filepath: string) {
-    const update = this.store.getRecord(filepath);
+  async getUpdateFor(filepath: string) {
+    const update = await this.store.getRecord(filepath);
     return update;
   }
   
   // current hash should be an empty string for an update that doesn't exist
   async pushUpdate(fileContents: Blob | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult> {
-    const currentUpdate = this.store.getRecord(filepath);
+    const currentUpdate = await this.store.getRecord(filepath);
 
     if (currentUpdate === null) {
       if (currentHash !== "") {
@@ -94,7 +94,7 @@ export class DirectoryVault implements Vault {
   }
 
   async getCurrent(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | Blob> {
-    const record = this.store.getRecord(filepath);
+    const record = await this.store.getRecord(filepath);
 
     if (record === null) {
       return "NON-EXISTANT";
@@ -107,8 +107,8 @@ export class DirectoryVault implements Vault {
     return blob;
   }
 
-  getUpdatesSince(timestamp: number): Update[] {
-    const updates = this.store.getRecordsNewThan(timestamp);
+  async getUpdatesSince(timestamp: number): Promise<Update[]> {
+    const updates = await this.store.getRecordsNewThan(timestamp);
     return updates;
   }
 }

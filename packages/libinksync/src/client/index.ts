@@ -1,6 +1,6 @@
 import { treaty, type Treaty } from "@elysiajs/eden";
 import { type App } from "../server/http";
-import { Store, type Update } from "../store";
+import { BetterSqliteStore, type Store, type Update } from "../store";
 import path from "path";
 import fs from "fs"
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
@@ -85,7 +85,7 @@ export class VaultClient {
         }
       }
 
-      const clientUpdate = this.store.getRecord(filepath) ?? "UNTRACKED";
+      const clientUpdate = await this.store.getRecord(filepath) ?? "UNTRACKED";
       const serverUpdate = knownServerUpdate ?? await this.getServerUpdate(filepath);
       const isModified = await this.isFileModified(filepath, clientUpdate);
       const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
@@ -348,7 +348,7 @@ export function getDirectoryClient(vaultName: string, address: string, directory
   const dbPath = path.join(directory, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  const store = new Store(dbPath);
+  const store = new BetterSqliteStore(dbPath);
 
   return new VaultClient(address, store, filesystem, vaultName);
 }

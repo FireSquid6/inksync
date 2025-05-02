@@ -10,7 +10,15 @@ export const updateSchema = z.object({
 })
 export type Update = z.infer<typeof updateSchema>;
 
-export class Store {
+export interface Store {
+  updateRecord(filepath: string, hash: string, time: number): Promise<void>;
+  getAllRecords(): Promise<Update[]>;
+  updateRecordObject(update: Update): Promise<void>;
+  getRecordsNewThan(timestamp: number): Promise<Update[]>;
+  getRecord(filepath: string): Promise<Update | null>;
+}
+
+export class BetterSqliteStore implements Store {
   private db: Sqlite.Database;
 
   constructor(dbFile: string) {
@@ -25,7 +33,7 @@ export class Store {
     `).run();
   }
 
-  updateRecord(filepath: string, hash: string, time: number) {
+  async updateRecord(filepath: string, hash: string, time: number) {
     const result = this.db.prepare(`
       INSERT OR REPLACE INTO ${TABLE_NAME} (filepath, hash, time)
       VALUES (?, ?, ?)
@@ -36,11 +44,11 @@ export class Store {
     }
   }
 
-  updateRecordObject(update: Update) {
+  async updateRecordObject(update: Update) {
     this.updateRecord(update.filepath, update.hash, update.time);
   }
 
-  getRecord(filepath: string): Update | null {
+  async getRecord(filepath: string): Promise<Update | null> {
     const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE filepath = ?;
@@ -58,7 +66,7 @@ export class Store {
     return updates[0]!;
   }
 
-  getRecordsNewThan(timestamp: number): Update[] {
+  async getRecordsNewThan(timestamp: number): Promise<Update[]> {
     const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
       WHERE time > ?;
@@ -68,7 +76,7 @@ export class Store {
     return updates;
   }
 
-  getAllRecords(): Update[] {
+  async getAllRecords(): Promise<Update[]> {
     const result = this.db.prepare(`
       SELECT filepath, time, hash FROM ${TABLE_NAME}
     `).all();
