@@ -1,5 +1,4 @@
 import { FilePicker } from "@capawesome/capacitor-file-picker";
-import { useState } from "react";
 
 export interface TextInputProps {
   state: string;
@@ -24,31 +23,31 @@ export function TextInput(props: TextInputProps) {
 
 export interface FileInputProps {
   type: "directory" | "file";
+  setState: (s: string) => void;
+  state: string;
 }
 
 export function FileInput(props: FileInputProps) {
-  const [picked, setPicked] = useState<string>("");
-
   const onClick = async () => {
     switch (props.type) {
       case "directory":
         const dir = await FilePicker.pickDirectory();
-        setPicked(dir.path);
+        props.setState(dir.path);
         break;
       case "file":
         const { files } = await FilePicker.pickFiles({ limit: 1 });
         if (files.length !== 1) {
           throw new Error("somehow picked more than 1 file");
         }
-        setPicked(files[0].path ?? "No path...");
+        props.setState(files[0].path ?? "No path...");
         break;
     }
   }
 
   return (
-    <fieldset className="fieldset">
-      <button onClick={onClick}>Pick {props.type}</button>
-      <p>{picked}</p>
+    <fieldset className="fieldset flex flex-row">
+      <button className="btn" onClick={onClick}>Pick {props.type}</button>
+      <p className="w-full text-md  my-auto">{props.state}</p>
     </fieldset>
   )
 

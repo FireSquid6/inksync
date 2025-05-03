@@ -40,7 +40,7 @@ function RouteComponent() {
     <div>
       <TopSection />
       <div className="p-4">
-        {connections.map((c) => <ConnectionButton connection={c} />)}
+        {connections.map((c, i) => <ConnectionButton connection={c} key={i} />)}
       </div>
     </div>
   )

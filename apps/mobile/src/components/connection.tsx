@@ -5,7 +5,7 @@ import { TbDeviceIpadCancel } from "react-icons/tb";
 import { LuServerOff } from "react-icons/lu";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { TextInput } from "./form";
+import { FileInput, TextInput } from "./form";
 import { FaXmark } from "react-icons/fa6";
 
 export function AddConnectionModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
@@ -27,6 +27,7 @@ export function AddConnectionModal({ isOpen, onClose }: { isOpen: boolean, onClo
 
   const [vaultName, setVaultName] = useState<string>("");
   const [address, setAddress] = useState<string>("");
+  const [directory, setDirectory] = useState<string>("Chosen directory");
 
 
   return (
@@ -41,6 +42,7 @@ export function AddConnectionModal({ isOpen, onClose }: { isOpen: boolean, onClo
         <form className="py-4">
           <TextInput label="Address" state={address} onChange={setAddress} />
           <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
+          <FileInput state={directory} setState={setDirectory} type="directory" />
           <div className="flex flex-col w-full">
             <button className="btn btn-primary mt-16 mx-auto">Submit</button>
           </div>
