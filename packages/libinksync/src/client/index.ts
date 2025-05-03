@@ -6,8 +6,8 @@ import fs from "fs"
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
-import { hashBlob, type SuccessfulUpdate } from "@/server/vault";
-import { DirectoryFilesystem, type Filesystem } from "@/filesystem";
+import { hashBlob, type SuccessfulUpdate } from "../server/vault";
+import { DirectoryFilesystem, type Filesystem } from "../filesystem";
 
 
 export class HttpError {

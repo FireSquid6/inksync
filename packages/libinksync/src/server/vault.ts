@@ -1,8 +1,8 @@
 import path from "path";
 import { BunSqliteStore, type Store, type Update } from "../store";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
-import type { Filesystem } from "@/filesystem";
-import { DirectoryFilesystem } from "@/filesystem";
+import type { Filesystem } from "../filesystem";
+import { DirectoryFilesystem } from "../filesystem";
 
 export interface SuccessfulUpdate {
   type: "success";
