@@ -14,6 +14,7 @@
     "@capacitor/android": "^7.2.0",
     "@capacitor/core": "^7.2.0",
     "@capacitor/filesystem": "^7.0.1",
+    "@capawesome/capacitor-file-picker": "^7.0.1",
     "@tailwindcss/vite": "^4.1.5",
     "@tanstack/react-router": "^1.119.0",
     "@tanstack/react-router-devtools": "^1.119.1",

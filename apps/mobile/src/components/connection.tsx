@@ -4,6 +4,52 @@ import { CgPushUp, CgPushDown, CgCheck, CgFileRemove } from "react-icons/cg";
 import { TbDeviceIpadCancel } from "react-icons/tb";
 import { LuServerOff } from "react-icons/lu";
 import { Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { TextInput } from "./form";
+import { FaXmark } from "react-icons/fa6";
+
+export function AddConnectionModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement | null>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+
+    if (dialog === null) {
+      return;
+    }
+
+    if (isOpen) {
+      dialog.show();
+    } else {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  const [vaultName, setVaultName] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+
+
+  return (
+    <dialog ref={ref} open={isOpen} className="modal modal-bottom sm:modal-middle" onClose={onClose}>
+      <div className="modal-box">
+        <div className="flex flex-row">
+          <h2 className="text-2xl font-bold w-full">Add New Connection</h2>
+          <button onClick={onClose} className="btn btn-error btn-outline btn-circle">
+            <FaXmark size={32} />
+          </button>
+        </div>
+        <form className="py-4">
+          <TextInput label="Address" state={address} onChange={setAddress} />
+          <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
+          <div className="flex flex-col w-full">
+            <button className="btn btn-primary mt-16 mx-auto">Submit</button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+  )
+
+}
 
 export function ConnectionButton({ connection }: { connection: Connection }) {
   // TODO - change color for status
