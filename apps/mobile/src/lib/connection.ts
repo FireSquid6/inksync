@@ -7,7 +7,7 @@ export interface Connection {
   syncDirectory: string,
   address: string,
   lastSync: {
-    results: SyncResult[],
+    results: [string, SyncResult][],
     overall: "good" | "bad",
     time: Date,
   },

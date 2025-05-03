@@ -9,7 +9,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <React.Fragment>
-      <Outlet />
+      <main className="mx-auto bg-base-300 min-h-screen">
+        <Outlet />
+      </main>
       <TanStackRouterDevtools />
     </React.Fragment>
   )

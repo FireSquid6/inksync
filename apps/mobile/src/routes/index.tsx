@@ -32,10 +32,10 @@ function RouteComponent() {
   const connections = useAtomValue(connectionsAtom)
 
   return (
-    <div className="max-w-lg mx-auto bg-base-300 min-h-screen">
+    <div>
       <TopSection />
       <div className="p-4">
-        {connections.map((c) => <ConnectionButton connection={c} status={"syncing"} />)}
+        {connections.map((c) => <ConnectionButton connection={c} />)}
       </div>
     </div>
   )
