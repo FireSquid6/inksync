@@ -2,13 +2,13 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AddConnectionForm, ConnectionButton } from '../components/connection';
 import { useAtomValue } from 'jotai';
 import { connectionsAtom } from '../lib/connection';
+import { TestComponent } from "../components/test-component";
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
 })
 
 function TopSection() {
-
   return (
     <div className="flex justify-between items-center p-4 bg-base-100 mb-4">
       <h1 className="text-4xl font-bold">Inksync</h1>
@@ -35,6 +35,7 @@ function RouteComponent() {
         <h2 className="text-2xl font-bold w-full mb-8 mt-4">Current Connections</h2>
         {connections.map((c, i) => <ConnectionButton connection={c} key={i} />)}
       </div>
+      <TestComponent />
     </div>
   )
 }

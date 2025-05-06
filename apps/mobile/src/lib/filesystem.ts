@@ -1,5 +1,5 @@
 import { Filesystem as InksyncFilesystem } from "libinksync";
-import { Directory, Filesystem } from "@capacitor/filesystem";
+import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import path from "path";
 
 export class MobileFilesystem implements InksyncFilesystem {
@@ -28,12 +28,15 @@ export class MobileFilesystem implements InksyncFilesystem {
   async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
     const fp = path.join(this.rootPath, filepath);
     const stringData = data.toString();
+    console.log("Writing:");
+    console.log(stringData);
 
     await Filesystem.writeFile({
       path: fp,
       directory: this.dir,
       data: stringData,
       recursive: true,
+      encoding: Encoding.UTF8,
     });
   }
   async remove(filepath: string): Promise<void> {
