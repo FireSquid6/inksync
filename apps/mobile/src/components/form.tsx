@@ -29,18 +29,33 @@ export interface FileInputProps {
 
 export function FileInput(props: FileInputProps) {
   const onClick = async () => {
-    switch (props.type) {
-      case "directory":
-        const dir = await FilePicker.pickDirectory();
-        props.setState(dir.path);
-        break;
-      case "file":
-        const { files } = await FilePicker.pickFiles({ limit: 1 });
-        if (files.length !== 1) {
-          throw new Error("somehow picked more than 1 file");
-        }
-        props.setState(files[0].path ?? "No path...");
-        break;
+    try {
+      switch (props.type) {
+        case "directory":
+          console.log("Starting directory pick:");
+
+          try {
+
+            const dir = await FilePicker.pickDirectory();
+            console.log("Got:", dir);
+            props.setState(dir.path);
+          } catch (e) {
+            console.log("Got an error:");
+            console.log(e);
+          }
+
+          break;
+        case "file":
+          const { files } = await FilePicker.pickFiles({ limit: 1 });
+          if (files.length !== 1) {
+            throw new Error("somehow picked more than 1 file");
+          }
+          props.setState(files[0].path ?? "No path...");
+          break;
+      }
+    } catch (e) {
+      console.log("Error picking directory:")
+      console.log(e);
     }
   }
 

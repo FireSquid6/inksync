@@ -4,51 +4,30 @@ import { CgPushUp, CgPushDown, CgCheck, CgFileRemove } from "react-icons/cg";
 import { TbDeviceIpadCancel } from "react-icons/tb";
 import { LuServerOff } from "react-icons/lu";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FileInput, TextInput } from "./form";
-import { FaXmark } from "react-icons/fa6";
 
-export function AddConnectionModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement | null>(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-
-    if (dialog === null) {
-      return;
-    }
-
-    if (isOpen) {
-      dialog.show();
-    } else {
-      dialog.close();
-    }
-  }, [isOpen]);
-
+export function AddConnectionForm() {
   const [vaultName, setVaultName] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [directory, setDirectory] = useState<string>("Chosen directory");
 
 
   return (
-    <dialog ref={ref} open={isOpen} className="modal modal-bottom sm:modal-middle" onClose={onClose}>
-      <div className="modal-box">
-        <div className="flex flex-row">
-          <h2 className="text-2xl font-bold w-full">Add New Connection</h2>
-          <button onClick={onClose} className="btn btn-error btn-outline btn-circle">
-            <FaXmark size={32} />
-          </button>
-        </div>
-        <form className="py-4">
-          <TextInput label="Address" state={address} onChange={setAddress} />
-          <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
-          <FileInput state={directory} setState={setDirectory} type="directory" />
-          <div className="flex flex-col w-full">
-            <button className="btn btn-primary mt-16 mx-auto">Submit</button>
-          </div>
-        </form>
+    <div className="flex flex-col p-4">
+      <div className="flex flex-row">
+        <h2 className="text-2xl font-bold w-full">Add New Connection</h2>
       </div>
-    </dialog>
+      <form className="py-4 mx-auto w-full">
+        <TextInput label="Address" state={address} onChange={setAddress} />
+        <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
+        <FileInput state={directory} setState={setDirectory} type="directory" />
+        <div className="flex flex-row w-full">
+          <button className="btn btn-primary mt-16 ml-auto mr-4">Submit</button>
+          <button className="btn mt-16 mr-auto ml-4">Reset</button>
+        </div>
+      </form>
+    </div>
   )
 
 }
