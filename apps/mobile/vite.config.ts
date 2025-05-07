@@ -11,7 +11,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     nodePolyfills({
-      include: ["path", "stream"],
+      include: ["path", "stream", "crypto"],
     }),
   ],
   build: {

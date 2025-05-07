@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AddConnectionForm, ConnectionButton } from '../components/connection';
 import { useAtomValue } from 'jotai';
 import { connectionsAtom } from '../lib/connection';
-import { TestComponent } from "../components/test-component";
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
@@ -35,7 +34,6 @@ function RouteComponent() {
         <h2 className="text-2xl font-bold w-full mb-8 mt-4">Current Connections</h2>
         {connections.map((c, i) => <ConnectionButton connection={c} key={i} />)}
       </div>
-      <TestComponent />
     </div>
   )
 }

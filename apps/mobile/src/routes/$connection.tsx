@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { StatusBadge, SyncResultItem, formatDate } from "../components/connection";
-import { useConnectionWithId } from '../lib/connection';
+import { useConnectionWithId, useSetIsSyncing, useSyncConnection } from '../lib/connection';
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/$connection")({
@@ -8,21 +8,20 @@ export const Route = createFileRoute("/$connection")({
 })
 
 function RouteComponent() {
-  const { connection: connectionIdString } = Route.useParams();
-  const connectionId = parseInt(connectionIdString);
-  if (isNaN(connectionId)) {
-    return notFound();
-  }
+  const { connection: connectionId } = Route.useParams();
 
-  const connection = useConnectionWithId(connectionId);
+  const [connection, isSyncing] = useConnectionWithId(connectionId);
+  const syncConnection = useSyncConnection(connectionId);
+  const setIsSyncing = useSetIsSyncing(connectionId);
 
   if (connection === null) {
     return notFound();
   }
 
-  const handleSync = () => {
-    console.log("Syncing...");
-
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await syncConnection();
+    setIsSyncing(false);
   }
 
   const handleDelete = () => {
@@ -56,17 +55,20 @@ function RouteComponent() {
               <span>{connection.address}</span>
 
               <span className="font-medium">Last Sync:</span>
-              <span>{formatDate(connection.lastSync.time)}</span>
+              <span>{!connection.lastSync ? "Unsynced" : formatDate(connection.lastSync.time)}</span>
 
               <span className="font-medium">Status:</span>
               <span><StatusBadge status={connection.status} /></span>
 
               <span className="font-medium">Sync Result:</span>
-              <span className={
-                connection.lastSync.overall === 'good' ? 'text-success' : 'text-error'
-              }>
-                {connection.lastSync.overall === 'good' ? 'Success' : 'Failed'}
-              </span>
+              {!connection.lastSync ? (<span>No syncs.</span>) : (
+                <span className={
+                  connection.lastSync.overall === 'good' ? 'text-success' : 'text-error'
+                }>
+                  {connection.lastSync.overall === 'good' ? 'Success' : 'Failed'}
+                </span>
+
+              )}
             </div>
           </div>
 
@@ -74,9 +76,9 @@ function RouteComponent() {
             <button
               className="btn btn-primary flex-1"
               onClick={handleSync}
-              disabled={connection.status === 'syncing'}
+              disabled={isSyncing}
             >
-              {connection.status === 'syncing' ? 'Syncing...' : 'Sync Now'}
+              {isSyncing ? 'Syncing...' : 'Sync Now'}
             </button>
             <button
               className="btn btn-outline btn-error"
@@ -89,21 +91,27 @@ function RouteComponent() {
         <div className="bg-base-100 p-4 rounded-lg shadow-sm mt-8">
           <h2 className="text-lg font-semibold mb-4">Sync Logs</h2>
 
-          <div className="flex items-center justify-between mb-3">
-            <div className={connection.lastSync.overall === 'good' ? 'text-success' : 'text-error'}>
-              <span className="font-medium">Last Sync: </span>
-              {connection.lastSync.overall === 'good' ? 'Successful' : 'Failed'}
-            </div>
-            <span className="text-sm opacity-70">
-              {formatDate(connection.lastSync.time)}
-            </span>
-          </div>
+          {connection.lastSync === undefined ? (
+            <p>No syncs yet</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div className={connection.lastSync.overall === 'good' ? 'text-success' : 'text-error'}>
+                  <span className="font-medium">Last Sync: </span>
+                  {connection.lastSync.overall === 'good' ? 'Successful' : 'Failed'}
+                </div>
+                <span className="text-sm opacity-70">
+                  {formatDate(connection.lastSync.time)}
+                </span>
+              </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {connection.lastSync.results.map(([filepath, result], i) => (
-              <SyncResultItem key={i} result={result} filepath={filepath} />
-            ))}
-          </div>
+              <div className="max-h-96 overflow-y-auto">
+                {connection.lastSync.results.map(([filepath, result], i) => (
+                  <SyncResultItem key={i} result={result} filepath={filepath} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

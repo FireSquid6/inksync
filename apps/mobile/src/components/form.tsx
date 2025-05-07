@@ -9,7 +9,7 @@ export interface TextInputProps {
 
 export function TextInput(props: TextInputProps) {
   return (
-    <fieldset className="fieldset">
+    <fieldset className="fieldset w-[16rem]">
       <legend className="fieldset-legend">{props.label}</legend>
       <input type="text" className="input" placeholder={props.placeholder} value={props.state} onChange={(e) => {
         if (props.onChange !== undefined) {
