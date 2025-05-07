@@ -1,4 +1,4 @@
-import { BunSqliteStore } from "@/store";
+import { BunSqliteStore } from "../src/store";
 import { expect, test } from "bun:test";
 import { testdir } from "./setup.test";
 import path from "path";

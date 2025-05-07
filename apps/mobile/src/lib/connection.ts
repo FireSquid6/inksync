@@ -6,6 +6,7 @@ import { MobileFilesystem } from "./filesystem";
 import { Directory } from "@capacitor/filesystem";
 import { getMobileSqlite } from "./store";
 import { atomWithStorage } from "jotai/utils";
+import { promises } from "dns";
 
 export interface Connection {
   id: string,
@@ -21,7 +22,6 @@ export interface Connection {
 }
 
 export type ConnectionStatus = "synced" | "conflict" | "error" | "behind";
-
 
 export function getConnectionWithId(id: string, connections: Connection[], syncing: Record<string, boolean>): [Connection | null, boolean] {
   const connection = connections.find((c) => c.id === id);
@@ -44,6 +44,31 @@ export function useConnectionWithId(id: string) {
 }
 
 
+export function useSyncAll(): () => Promise<void> {
+  const [connections, setConnections] = useAtom(connectionsAtom);
+  const [isSyncing, setIsSyncing] = useAtom(isSyncingAtom);
+
+  const setSyncing = (connectionId: string, n: boolean) => {
+    let newIsSyncing = { ...isSyncing };
+    newIsSyncing[connectionId] = n;
+    setIsSyncing(newIsSyncing);
+  }
+
+  return async () => {
+    await Promise.all(connections.map(async (connection) => {
+      setSyncing(connection.id, true);
+
+      const newConnection = await syncConnection(connection);
+
+      const newConnections = connections.filter((c) => c.id !== newConnection.id);
+      newConnections.push(newConnection);
+      setConnections(newConnections);
+
+      setSyncing(connection.id, false);
+    }));
+  }
+}
+
 export function makeConnection(address: string, vaultName: string, directoryName: string): Connection {
   const directory = path.join("inksync-vaults", directoryName);
   const id = randomUUID()
@@ -65,7 +90,7 @@ export async function getClientFromConnection(connection: Connection): Promise<V
 
 export function useSyncConnection(connectionId: string): () => Promise<void> {
   const [connections, setConnections] = useAtom(connectionsAtom);
-  
+
   return async () => {
     const connection = connections.find((c) => c.id === connectionId);
     if (!connection) {
@@ -84,17 +109,17 @@ export function useSetIsSyncing(connectionId: string): (b: boolean) => void {
   const [isSyncing, setIsSyncing] = useAtom(isSyncingAtom);
 
   return (n: boolean) => {
-    let newIsSyncing = {...isSyncing};
+    let newIsSyncing = { ...isSyncing };
     newIsSyncing[connectionId] = n;
     setIsSyncing(newIsSyncing);
   }
-} 
+}
 
 export async function syncConnection(connection: Connection): Promise<Connection> {
   const client = await getClientFromConnection(connection);
 
-  const newConnection = {...connection};
-  
+  const newConnection = { ...connection };
+
   const results = await client.syncAll();
   let overall: "good" | "bad" = "good";
   let time = new Date();
@@ -114,51 +139,10 @@ export async function syncConnection(connection: Connection): Promise<Connection
   return newConnection;
 }
 
-export function addConnection(connection: Connection, connections: Connection[], setConnections: (c: Connection[]) => void) {
-
-} 
-
 export async function syncConnections(connection: Connection[]): Promise<Connection[]> {
   return await Promise.all(connection.map(async (c) => await syncConnection(c)));
 }
 
-export const connectionsAtom = atomWithStorage<Connection[]>("connections", [
-  {
-    id: "1",
-    vaultName: 'default',
-    syncDirectory: '/Documents',
-    address: 'localhost:1235',
-    status: "synced",
-    lastSync: {
-      time: new Date("2025-05-02T08:15:00"),
-      overall: "good",
-      results: [],
-    },
-  },
-  {
-    id: "2",
-    vaultName: 'notes',
-    syncDirectory: '/Home/Notes',
-    address: 'myvault.example.com',
-    status: "synced",
-    lastSync: {
-      time: new Date('2025-05-02T08:15:00'),
-      overall: "bad",
-      results: [],
-    },
-  },
-  {
-    id: "3",
-    vaultName: 'work',
-    syncDirectory: '/Work',
-    address: '192.168.1.10:8080',
-    status: "error",
-    lastSync: {
-      time: new Date('2025-04-30T16:45:00'),
-      overall: "bad",
-      results: [],
-    },
-  },
-])
+export const connectionsAtom = atomWithStorage<Connection[]>("connections", []);
 
 export const isSyncingAtom = atom<Record<string, boolean>>({});

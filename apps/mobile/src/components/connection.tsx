@@ -12,7 +12,6 @@ export function AddConnectionForm() {
   const [address, setAddress] = useState<string>("");
   const [directoryName, setDirectoryName] = useState<string>("");
 
-
   return (
       <div className="flex flex-col p-4">
         <div className="flex flex-row">

@@ -1,19 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { AddConnectionForm, ConnectionButton } from '../components/connection';
 import { useAtomValue } from 'jotai';
-import { connectionsAtom } from '../lib/connection';
+import { connectionsAtom, useSyncAll } from '../lib/connection';
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
 })
 
 function TopSection() {
+  const syncAll = useSyncAll();
+
   return (
     <div className="flex justify-between items-center p-4 bg-base-100 mb-4">
       <h1 className="text-4xl font-bold">Inksync</h1>
       <div className="flex gap-2">
         <button
           className="btn btn-accent"
+          onClick={syncAll}
         >
           Sync All
         </button>
