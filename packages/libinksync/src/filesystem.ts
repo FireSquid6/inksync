@@ -11,6 +11,10 @@ export interface Filesystem {
   isDir(filepath: string): Promise<boolean>;
   copyTo(src: string, dest: string): Promise<void>;
   mkdir(dirpath: string): Promise<void>;
+
+  // return the filepath given by the server
+  // uploadFile(filepath: string): Promise<string>;
+  // downloadFile(url: string, filepath: string): Promise<string>;
 }
 
 
