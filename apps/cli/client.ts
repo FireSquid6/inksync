@@ -2,9 +2,11 @@ import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME, writeConnectfile, readConne
 import path from "path";
 import fs from "fs";
 import type { SyncResult } from "libinksync/src/client/results";
+import { consoleLogger } from "libinksync/src/logger";
 
 
 export function getClient(directory: string): VaultClient | null {
+  const logger = consoleLogger();
   const connectfilePath = path.join(directory, INKSYNC_DIRECTORY_NAME, CLIENT_CONNECTFILE);
   if (!fs.existsSync(connectfilePath)) {
     return null;
@@ -12,7 +14,7 @@ export function getClient(directory: string): VaultClient | null {
 
   const connectfile = readConnectfile(connectfilePath);
 
-  const client = getDirectoryClient(connectfile.name, connectfile.address, directory);
+  const client = getDirectoryClient(connectfile.name, connectfile.address, directory, logger);
   return client;
 }
 

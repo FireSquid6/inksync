@@ -3,12 +3,13 @@ import { type App } from "../server/http";
 import { BunSqliteStore, type Store, type Update } from "../store";
 import path from "path";
 import fs from "fs"
-import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
+import { DELETED_HASH, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
 import { hashBlob, type SuccessfulUpdate } from "../server/vault";
 import { DirectoryFilesystem, type Filesystem } from "../filesystem";
 import { silentLogger, type Logger } from "../logger";
+import { isIgnored } from "./ignorelist";
 
 
 export class HttpError {
@@ -77,7 +78,7 @@ export class VaultClient {
     const files = await this.getAllModifiedFiles();
     this.logger.log("Found updated files on the client:");
     for (const file of files) {
-      this.logger.log("  ", file);
+      this.logger.log(`  ${file}`);
     }
 
     this.logger.log("Pushing from the client...");
@@ -88,7 +89,13 @@ export class VaultClient {
       return [filepath, syncResult];
     }));
     this.logger.log("Server in sync with client!");
+
     return results;
+  }
+
+  // just gets the status
+  async status() {
+
   }
 
   async syncFile(filepath: string, knownServerUpdate?: Update): Promise<SyncResult> {
@@ -185,13 +192,9 @@ export class VaultClient {
   async ping(): Promise<number | string> {
     const start = Date.now();
 
-    try {
-      const res = await this.api.ping.get();
-      if (res.status !== 200) {
-        throw res.error;
-      }
-    } catch (e) {
-      return `Unable to connect to server: ${e}`;
+    const res = await this.api.ping.get();
+    if (res.status !== 200) {
+      throw res.error;
     }
 
     const end = Date.now();
@@ -227,12 +230,17 @@ export class VaultClient {
 
   private async getAllModifiedFiles(): Promise<string[]> {
     const modifiedFiles: string[] = []
+    const ignoreList = await this.getIgnorePaths();
 
     const files = await this.fs.listdir("", true);
 
 
-    const promises = files.map((filepath) => new Promise(async (resolve) => {
+    const promises = files.map((filepath) => new Promise<void>(async (resolve) => {
       const update = await this.store.getRecord(filepath);
+      if (await this.fs.isDir(filepath) || isIgnored(filepath, ignoreList)) {
+        resolve();
+        return;
+      }
 
       const isModified = await this.isFileModified(filepath, update ?? "UNTRACKED");
 
@@ -240,6 +248,7 @@ export class VaultClient {
         modifiedFiles.push(filepath);
       }
 
+      resolve();
     }))
 
     await Promise.all(promises);
@@ -354,6 +363,35 @@ export class VaultClient {
     this.store.setLastPull(t);
   }
 
+  private async getIgnorePaths(): Promise<string[]> {
+    const ignorePaths: string[] = [];
+
+    if (await this.fs.exists(IGNOREFILE_NAME)) {
+      const blob = await this.fs.readFrom(IGNOREFILE_NAME);
+      const text = await blob.text();
+      const lines = text.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("#")) {
+          continue;
+        }
+
+        ignorePaths.push(line);
+      }
+    }
+
+    if (ignorePaths.find((v) => v === ".conflicts") === undefined) {
+      ignorePaths.push(".conflicts");
+    }
+
+    if (ignorePaths.find((v) => v === INKSYNC_DIRECTORY_NAME) === undefined) {
+      ignorePaths.push(INKSYNC_DIRECTORY_NAME);
+    }
+
+
+    return ignorePaths;
+  }
+
   async getLastServerPull(): Promise<number> {
     return await this.store.getLastPull();
   }
@@ -363,7 +401,8 @@ export class VaultClient {
 function getUrlFromAddress(address: string) {
   const split = address.split(":");
 
-  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" ? "http" : "https";
+  const dotSplit = split[0]!.split(".")
+  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" || dotSplit.length === 1 ? "http" : "https";
 
   return `${protocol}://${address}`;
 }
@@ -385,14 +424,14 @@ function makeError(status: number, error: unknown): SyncResult {
 }
 
 
-export function getDirectoryClient(vaultName: string, address: string, directory: string) {
+export function getDirectoryClient(vaultName: string, address: string, directory: string, logger: Logger = silentLogger()) {
   const filesystem = new DirectoryFilesystem(directory);
   const dbPath = path.join(directory, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   const store = new BunSqliteStore(dbPath);
 
-  return new VaultClient(address, store, filesystem, vaultName);
+  return new VaultClient(address, store, filesystem, vaultName, logger);
 }
 
 function formatDate(date: Date | number): string {

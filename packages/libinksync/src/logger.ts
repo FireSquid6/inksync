@@ -1,26 +1,26 @@
 
 export interface Logger {
-  log(...args: any): void;
-  error(...args: any): void;
+  log(text: string): void;
+  error(text: string): void;
 }
 
 
 export function silentLogger(): Logger {
   return {
-    log(..._: any): void {
+    log(_: string): void {
     },
-    error(..._: any): void {
+    error(_: string): void {
     },
   }
 }
 
 export function consoleLogger(): Logger {
   return {
-    log(...args: any): void {
-      console.log(args);
+    log(data: string): void {
+      console.log(data);
     },
-    error(...args: any): void {
-      console.error(args);
+    error(data: string): void {
+      console.error(data);
     },
   }
 }

@@ -12,7 +12,7 @@ const server = new Command()
 server
   .command("start")
   .description("Starts an inksync server with the provided config file")
-  .option("-c, --config [directory]", "the directory to start the server in. Defaults to ${cwd}/inksync-server.conf")
+  .option("-c, --config [directory]", "the directory to start the server in. Defaults to ${cwd}/inksync.config.yaml")
   .action(({ config: configPath }) => {
     if (typeof configPath === "boolean" || configPath === undefined) {
       configPath = path.join(process.cwd(), "inksync.config.yaml");
@@ -44,7 +44,6 @@ sync
   .argument("<address>", "The address of the server")
   .argument("<name>", "The name of the vault")
   .action(async (address, name ) => {
-    // TODO - ping the address to confirm it works
     const directory = process.cwd()
     setConnectfile(directory, name, address);
     console.log(`Setup ${directory} to connect to ${name}@${address}`)
@@ -142,11 +141,7 @@ sync
 
     const result = await client.ping();
 
-    if (typeof result === "string") {
-      console.log(result);
-    } else {
-      console.log(`Success. ${result}ms round trip.`);
-    }
+    console.log(`Success. ${result}ms round trip.`);
   })
 
 const program = new Command()
