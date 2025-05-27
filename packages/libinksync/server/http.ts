@@ -53,7 +53,7 @@ export const app = new Elysia()
     const result = await vault.getCurrent(fp);
     if (typeof result === "string") {
       return result;
-    } 
+    }
 
     return await result.arrayBuffer();
   }, {
@@ -102,7 +102,7 @@ export const app = new Elysia()
   // TODO - add vault guard to upload
   .post("/upload", async (ctx) => {
     const { lifetime, file } = ctx.body;
-    
+
     if (lifetime < 0 || lifetime > 7200) {
       return ctx.error(400, `Lifetime must be greater than 0 and less than 7200`);
     }
@@ -110,9 +110,8 @@ export const app = new Elysia()
     const filename = randomUUID();
     const filepath = path.join(`./temp/${filename}`);
 
-
     const ws = fs.createWriteStream(filepath);
-    const stream = Readable.from(file.stream())
+    const stream = fileToReadable(file);
     const error = await new Promise<Error | "OK">((resolve) => {
       stream.pipe(ws);
 
@@ -132,10 +131,10 @@ export const app = new Elysia()
       file: t.File(),
     })
   })
-  .get("/vaults/:vault/stream", (ctx) => {
+  // TODO - allow user to subscribe to vault events.
+  .ws("/stream", { 
 
   })
-// TODO: /vaults/:vault/stream
 
 export type App = typeof app;
 
@@ -150,4 +149,24 @@ export async function startAppWithVaults(vaults: Vault[], port: number): Promise
   });
 
   return app;
+}
+
+function fileToReadable(file: File): Readable {
+  const reader = file.stream().getReader();
+
+  return new Readable({
+    async read() {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          this.push(null);
+        } else {
+          this.push(Buffer.from(value));
+        }
+      } catch (e) {
+        const error = e instanceof Error ? e : undefined;
+        this.destroy(error);
+      }
+    }
+  });
 }

@@ -1,8 +1,10 @@
-import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME, writeConnectfile, readConnectfile, VaultClient, getDirectoryClient } from "libinksync";
 import path from "path";
 import fs from "fs";
-import type { SyncResult } from "libinksync/src/client/results";
-import { consoleLogger } from "libinksync/src/logger";
+import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME } from "libinksync/constants";
+import { VaultClient, getDirectoryClient } from "libinksync/client";
+import { writeConnectfile, readConnectfile } from "libinksync/client/connectfile";
+import type { SyncResult } from "libinksync/client/results";
+import { consoleLogger } from "libinksync/logger";
 
 
 export function getClient(directory: string): VaultClient | null {

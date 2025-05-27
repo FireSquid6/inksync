@@ -1,5 +1,5 @@
 import { treaty, type Treaty } from "@elysiajs/eden";
-import { type App } from "../server/http";
+import type { App } from "../server/http";
 import { BunSqliteStore, type Store, type Update } from "../store";
 import path from "path";
 import fs from "fs"

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { DirectoryVault, startAppWithVaults, type Vault } from "libinksync";
+import { DirectoryVault, type Vault } from "libinksync/server/vault";
+import { startAppWithVaults } from "libinksync/server/http";
 
 
 export const baseVaultSchema = z.object({

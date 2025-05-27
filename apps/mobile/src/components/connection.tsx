@@ -1,4 +1,4 @@
-import { type SyncResult } from "libinksync";
+import { type SyncResult } from "libinksync/client/results";
 import { type Connection, type ConnectionStatus } from "../lib/connection";
 import { CgPushUp, CgPushDown, CgCheck, CgFileRemove } from "react-icons/cg";
 import { TbDeviceIpadCancel } from "react-icons/tb";

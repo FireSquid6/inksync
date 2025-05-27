@@ -17,5 +17,6 @@ export default defineConfig({
   build: {
     // for dev, disable later
     minify: false,
+    target: "esnext",
   }
 })

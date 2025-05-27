@@ -1,11 +1,11 @@
 import { test, expect } from "bun:test";
-import { getDirectoryClient } from "../src/client";
-import { startAppWithVaults } from "../src/server/http";
-import { DirectoryVault } from "../src/server/vault";
+import { getDirectoryClient } from "../client";
+import { startAppWithVaults } from "../server/http";
+import { DirectoryVault } from "../server/vault";
 import path from "path";
 import fs from "fs";
 import { testdir } from "./setup.test";
-import type { Conflict } from "../src/client/results";
+import type { Conflict } from "../client/results";
 
 test("basic client update", async () => {
   const vaultDir = path.join(testdir, "server-a");

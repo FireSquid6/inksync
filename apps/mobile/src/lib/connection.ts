@@ -1,4 +1,5 @@
-import { VaultClient, type SyncResult } from "libinksync";
+import { VaultClient } from "libinksync/client";
+import type { SyncResult } from "libinksync/client/results";
 import { atom, useAtom, useAtomValue } from "jotai";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -6,7 +7,6 @@ import { MobileFilesystem } from "./filesystem";
 import { Directory } from "@capacitor/filesystem";
 import { getMobileSqlite } from "./store";
 import { atomWithStorage } from "jotai/utils";
-import { promises } from "dns";
 
 export interface Connection {
   id: string,

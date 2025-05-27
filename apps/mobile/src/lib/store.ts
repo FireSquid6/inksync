@@ -1,4 +1,4 @@
-import { type Store, type Update, updateSchema } from "libinksync";
+import { type Store, type Update, updateSchema } from "libinksync/store";
 import { CapacitorSQLite, SQLiteConnection } from "@capacitor-community/sqlite";
 import { Capacitor } from "@capacitor/core";
 import { z } from "zod";

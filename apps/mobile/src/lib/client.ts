@@ -1,4 +1,4 @@
-import { VaultClient } from "libinksync";
+import { VaultClient } from "libinksync/client";
 import type { Connection } from "./connection";
 import { getMobileSqlite } from "./store";
 import { MobileFilesystem } from "./filesystem";

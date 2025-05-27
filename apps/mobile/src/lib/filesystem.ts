@@ -1,4 +1,4 @@
-import { type Filesystem as InksyncFilesystem } from "libinksync";
+import { type Filesystem as InksyncFilesystem } from "libinksync/filesystem";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import path from "path";
 
