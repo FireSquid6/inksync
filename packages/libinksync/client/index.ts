@@ -364,15 +364,19 @@ export class VaultClient {
   }
 
   private getSyncStatus(clientUpdate: Update | "UNTRACKED", serverUpdate: Update | "UNTRACKED"): "in-sync" | "out-of-sync" | "fucked" {
+
+    
     if (clientUpdate === "UNTRACKED" || serverUpdate === "UNTRACKED") {
-      switch ([clientUpdate === "UNTRACKED", serverUpdate === "UNTRACKED"]) {
-        case [true, true]:
-          return "in-sync";
-        case [true, false]:
-          return "fucked";
-        case [false, true]:
-          return "out-of-sync";
-      }
+      const clientUntracked = clientUpdate === "UNTRACKED";
+      const serverUntracked = serverUpdate === "UNTRACKED";
+
+      if (clientUntracked && serverUntracked) {
+        return "in-sync";
+      } else if (clientUntracked && !serverUntracked) {
+        return "fucked"
+      } else if (!clientUntracked && serverUntracked) {
+        return "out-of-sync";
+      }           
     }
 
     // we know that neither are "UNTRACKED"
