@@ -2,12 +2,11 @@ import { type Vault } from "./vault";
 import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";
-// import { randomUUID } from "crypto";
-// import path from "path";
-// import fs from "fs";
-// import { rejects } from "assert";
+import { randomUUID } from "crypto";
+import path from "path";
+import fs from "fs";
+import { Readable } from "stream";
 
-// TODO - encode and decode filepaths into base 64
 export const app = new Elysia()
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
@@ -98,37 +97,38 @@ export const app = new Elysia()
     }),
   })
   // TODO - add vault guard to upload
-  // .post("/upload", async (ctx) => {
-  //   const { lifetime, file } = ctx.body;
-  //   
-  //   if (lifetime < 0 || lifetime > 7200) {
-  //     return ctx.error(400, `Lifetime must be greater than 0 and less than 7200`);
-  //   }
-  //
-  //   const filename = randomUUID();
-  //   const stream = file.stream();
-  //   const filepath = path.join(`./temp/${filename}`);
-  //
-  //   const ws = fs.createWriteStream(filepath);
-  //
-  //   ws.on("error", (error) => {
-  //     return ctx.error(500, `Writestream error: ${error}`);
-  //   });
-  //
-  //   for await (const chunk of stream) {
-  //     // TODO - is there a way this fails with large files?
-  //     // need to wait for "drain" events?
-  //     // really not sure how a stream works under the hood
-  //     ws.write(chunk);
-  //   }
-  //
-  //   return filename;
-  // }, {
-  //   body: t.Object({
-  //     lifetime: t.Number(),
-  //     file: t.File(),
-  //   })
-  // })
+  .post("/upload", async (ctx) => {
+    const { lifetime, file } = ctx.body;
+    
+    if (lifetime < 0 || lifetime > 7200) {
+      return ctx.error(400, `Lifetime must be greater than 0 and less than 7200`);
+    }
+
+    const filename = randomUUID();
+    const filepath = path.join(`./temp/${filename}`);
+
+
+    const ws = fs.createWriteStream(filepath);
+    const stream = Readable.from(file.stream())
+    const error = await new Promise<Error | "OK">((resolve) => {
+      stream.pipe(ws);
+
+      ws.on("finish", () => resolve("OK"))
+      ws.on("error", (err) => resolve(err));
+      stream.on("error", (err) => resolve(err));
+    });
+
+    if (error !== "OK") {
+      return ctx.error(500, `Stream error: ${error.message} ${error.stack} ${error.name} ${error.cause}`);
+    }
+
+    return filename;
+  }, {
+    body: t.Object({
+      lifetime: t.Number(),
+      file: t.File(),
+    })
+  })
   .get("/vaults/:vault/stream", (ctx) => {
 
   })
