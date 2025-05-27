@@ -1,4 +1,4 @@
-import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME, writeConnectfile, readConnectfile, type Connectfile, VaultClient, getDirectoryClient } from "libinksync";
+import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME, writeConnectfile, readConnectfile, VaultClient, getDirectoryClient } from "libinksync";
 import path from "path";
 import fs from "fs";
 import type { SyncResult } from "libinksync/src/client/results";

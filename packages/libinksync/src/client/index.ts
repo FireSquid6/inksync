@@ -8,6 +8,7 @@ import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
 import { hashBlob, type SuccessfulUpdate } from "../server/vault";
 import { DirectoryFilesystem, type Filesystem } from "../filesystem";
+import { silentLogger, type Logger } from "../logger";
 
 
 export class HttpError {
@@ -27,9 +28,10 @@ export class VaultClient {
   private url: string;
   private vault: string;
   private address: string;
+  private logger: Logger
 
 
-  constructor(address: string, store: Store, fs: Filesystem, vault: string) {
+  constructor(address: string, store: Store, fs: Filesystem, vault: string, logger: Logger = silentLogger()) {
     this.fs = fs;
     this.address = address;
     this.vault = vault;
@@ -37,6 +39,7 @@ export class VaultClient {
 
     this.api = treaty<App>(this.url);
     this.store = store;
+    this.logger = logger;
   }
 
   getVault() {
@@ -55,23 +58,37 @@ export class VaultClient {
   async syncServerUpdated(): Promise<[string, SyncResult][]> {
     const updates = await this.getFreshServerUpdates();
 
+    this.logger.log(`Got ${updates.length} updates from the server`);
+
+    this.logger.log("Syncing from the server...");
     const results = await Promise.all(updates.map(async (u): Promise<[string, SyncResult]> => {
-      return [u.filepath, await this.syncFile(u.filepath, u)];
+      const syncResult = await this.syncFile(u.filepath, u);
+      this.logger.log(`  ${syncResult.type.toUpperCase()} - ${u.filepath}`);
+
+      return [u.filepath, syncResult];
     }));
+    this.logger.log("In sync with server!");
 
     await this.setLastServerPull(Date.now());
     return results;
   }
-  
-  async syncClientUpdated(): Promise<[string, SyncResult][]> {
-    return [
-      ["all", {
-        domain: "bad",
-        type: "client-error",
-        error: "Sync all isn't implemented yet",
-      }]
-    ]
 
+  async syncClientUpdated(): Promise<[string, SyncResult][]> {
+    const files = await this.getAllModifiedFiles();
+    this.logger.log("Found updated files on the client:");
+    for (const file of files) {
+      this.logger.log("  ", file);
+    }
+
+    this.logger.log("Pushing from the client...");
+    const results = await Promise.all(files.map(async (filepath): Promise<[string, SyncResult]> => {
+      const syncResult = await this.syncFile(filepath);
+
+      this.logger.log(`  ${syncResult.type.toUpperCase()} - ${filepath}`);
+      return [filepath, syncResult];
+    }));
+    this.logger.log("Server in sync with client!");
+    return results;
   }
 
   async syncFile(filepath: string, knownServerUpdate?: Update): Promise<SyncResult> {
@@ -189,6 +206,28 @@ export class VaultClient {
     }
 
     return res.data;
+  }
+
+  private async getAllModifiedFiles(): Promise<string[]> {
+    const modifiedFiles: string[] = []
+
+    const files = await this.fs.listdir("", true);
+
+
+    const promises = files.map((filepath) => new Promise(async (resolve) => {
+      const update = await this.store.getRecord(filepath);
+
+      const isModified = await this.isFileModified(filepath, update ?? "UNTRACKED");
+
+      if (isModified) {
+        modifiedFiles.push(filepath);
+      }
+
+    }))
+
+    await Promise.all(promises);
+
+    return modifiedFiles;
   }
 
   private async applyServerUpdate(update: Update) {
