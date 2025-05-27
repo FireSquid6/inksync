@@ -10,7 +10,7 @@ import { Readable } from "stream";
 export const app = new Elysia()
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
-  .get("/ping", (ctx) => {
+  .get("/ping", () => {
     return "pong!";
   })
   .get("/vaults", (ctx) => {

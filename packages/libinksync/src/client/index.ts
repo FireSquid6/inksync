@@ -22,6 +22,8 @@ export class HttpError {
   }
 }
 
+export type Status = "PULL NEEDED" | "CONFLICT" | "PUSH NEEDED"
+
 export class VaultClient {
   private fs: Filesystem;
   private api: Treaty.Create<App>;
@@ -48,6 +50,36 @@ export class VaultClient {
   }
   getAddress() {
     return this.address;
+  }
+
+  async status(): Promise<[string, Status][]> {
+    const serverUpdates = await this.getFreshServerUpdates();
+    const modifiedFiles = await this.getAllModifiedFiles();
+
+    const clientSet = new Set(modifiedFiles);
+    const serverSet = new Set(serverUpdates.map((u) => u.filepath));
+
+    const conflicts = clientSet.intersection(serverSet);
+
+    // everything needed to be pulled
+    const pushesNeeded = clientSet.difference(serverSet);
+
+    // everything the server updated but is in sync here
+    const pullsNeded = serverSet.difference(clientSet);
+
+    const status: [string, Status][] = [];
+
+    for (const conflict of conflicts) {
+      status.push([conflict, "CONFLICT"]);
+    }
+    for (const pullNeeded of pullsNeded) {
+      status.push([pullNeeded, "PULL NEEDED"]);
+    }
+    for (const pushNeeded of pushesNeeded) {
+      status.push([pushNeeded, "PUSH NEEDED"]);
+    }
+
+    return status;
   }
 
   async syncAll(): Promise<[string, SyncResult][]> {
@@ -91,11 +123,6 @@ export class VaultClient {
     this.logger.log("Server in sync with client!");
 
     return results;
-  }
-
-  // just gets the status
-  async status() {
-
   }
 
   async syncFile(filepath: string, knownServerUpdate?: Update): Promise<SyncResult> {
@@ -219,7 +246,8 @@ export class VaultClient {
     const lastUpdate = await this.getLastServerPull();
     const res = await this.api
       .vaults({ vault: this.vault })
-      .updates.get({ query: { since: lastUpdate } });
+      .updates
+      .get({ query: { since: lastUpdate } });
 
     if (res.status !== 200 || res.data === null) {
       throw makeError(res.status, res.error);

@@ -144,6 +144,28 @@ sync
     console.log(`Success. ${result}ms round trip.`);
   })
 
+sync
+  .command("status")
+  .description("Get the status of the sync")
+  .action(async () => {
+    const directory = process.cwd()
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const result = await client.status();
+
+    if (result.length === 0) {
+      console.log("In sync.");
+    }
+
+    for (const [filepath, status] of result) {
+      console.log(`${filepath} -> ${status}`);
+    }
+  })
+
 const program = new Command()
 
 program.addCommand(sync);
