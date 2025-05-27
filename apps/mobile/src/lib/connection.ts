@@ -93,6 +93,7 @@ export function useConnectionMutators(connectionId: string) {
   const [isSyncing, setIsSyncing] = useAtom(isSyncingAtom);
 
   const setIsSyncingFunction = (n: boolean) => {
+    console.log("Setting is syncing to", n);
     let newIsSyncing = { ...isSyncing };
     newIsSyncing[connectionId] = n;
     setIsSyncing(newIsSyncing);
@@ -102,18 +103,24 @@ export function useConnectionMutators(connectionId: string) {
     async syncConnection() {
       const connection = connections.find((c) => c.id === connectionId);
       if (!connection) {
+        console.log("connection does not exist");
         return;
       }
 
       setIsSyncingFunction(true);
 
-      const newConnection = await syncConnection(connection);
+      try {
+        console.log("Syncing...")
+        const newConnection = await syncConnection(connection);
+        const newConnections = connections.filter((c) => c.id !== newConnection.id);
+        newConnections.push(newConnection);
+        setConnections(newConnections);
+        console.log("Success!")
+      } catch (e) {
 
-      const newConnections = connections.filter((c) => c.id !== newConnection.id);
-      newConnections.push(newConnection);
-      setConnections(newConnections);
-
-      setIsSyncingFunction(false);
+      } finally {
+        setIsSyncingFunction(false);
+      }
     },
     setIsSyncing(n: boolean) {
       setIsSyncingFunction(n);
@@ -123,7 +130,17 @@ export function useConnectionMutators(connectionId: string) {
       setConnections(newConnections);
     },
     async fetchConnection() {
+      const connection = connections.find((c) => c.id === connectionId);
+      if (!connection) {
+        console.log("connection does not exist");
+        return;
+      }
+      console.log("fetching for connection", connectionId);
 
+      const newConnection = await fetchConnection(connection);
+      const newConnections = connections.filter((c) => c.id !== newConnection.id);
+      newConnections.push(newConnection);
+      setConnections(newConnections);
     }
   }
 }
@@ -148,6 +165,20 @@ export async function syncConnection(connection: Connection): Promise<Connection
     overall,
     results,
   }
+
+  return newConnection;
+}
+
+export async function fetchConnection(connection: Connection): Promise<Connection> {
+  console.log("in the actual fetchConnecion function now")
+  const client = await getClientFromConnection(connection);
+  console.log("got client:", client);
+
+  const newConnection = { ...connection };
+
+  const results = await client.status();
+  console.log("raw results:");
+  console.log(results);
 
   return newConnection;
 }

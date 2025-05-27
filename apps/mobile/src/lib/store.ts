@@ -5,8 +5,8 @@ import { z } from "zod";
 
 
 export async function getMobileSqlite(address: string, vault: string): Promise<Store> {
-  const updateTable = `updates-${address}-${vault}`;
-  const pullTable = `pulls-${address}-${vault}`;
+  const updateTable = `"updates${address}-${vault}"`;
+  const pullTable = `"pulls-${address}-${vault}"`;
   const dbName = `db-${address}-${vault}`;
   const sqlite = new SQLiteConnection(CapacitorSQLite);
   const platform = Capacitor.getPlatform();

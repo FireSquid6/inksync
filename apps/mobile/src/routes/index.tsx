@@ -12,7 +12,7 @@ function TopSection() {
 
   return (
     <div className="flex justify-between items-center p-4 bg-base-100 mb-4">
-      <h1 className="text-4xl font-bold">Inksync</h1>
+      <h1 className="text-4xl font-bold">Inksync v3</h1>
       <div className="flex gap-2">
         <button
           className="btn btn-accent"

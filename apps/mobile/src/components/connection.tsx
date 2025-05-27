@@ -55,6 +55,7 @@ export function ConnectionButton({ connection }: { connection: Connection }) {
   const { syncConnection, fetchConnection } = useConnectionMutators(connection.id);
 
   const onFetch = async () => {
+    console.log("Fetch pressed")
     await fetchConnection();
 
   }

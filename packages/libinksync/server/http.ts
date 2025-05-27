@@ -9,6 +9,10 @@ import { Readable } from "stream";
 function logResponse(method: string, path: string, code: number | string) {
   let marker = "+";
 
+  while (method.length < 5) {
+    method = method + " ";
+  }
+
   if (typeof code === "number" && code >= 400) {
     if (code < 500) {
       marker = "-";
@@ -24,7 +28,6 @@ function logResponse(method: string, path: string, code: number | string) {
   }
 
   console.log(`${marker} ${method} ${path} -> ${code}`);
-
 }
 
 export const app = new Elysia()
