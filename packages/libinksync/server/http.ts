@@ -1,5 +1,4 @@
 import { type Vault } from ".";
-import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "crypto";
@@ -7,11 +6,47 @@ import path from "path";
 import fs from "fs";
 import { Readable } from "stream";
 
+function logResponse(method: string, path: string, code: number | string) {
+  let marker = "+";
+
+  if (typeof code === "number" && code >= 400) {
+    if (code < 500) {
+      marker = "-";
+    } else {
+      marker = "!";
+    }
+  } else {
+    if (code === "INTERNAL_SERVER_ERROR" || code === "UNKNOWN" || code === "INVALID_COOKIE_SIGNATURE") {
+      marker = "!";
+    } else {
+      marker = "-";
+    }
+  }
+
+  console.log(`${marker} ${method} ${path} -> ${code}`);
+
+}
+
 export const app = new Elysia()
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
+
+  .onAfterResponse((ctx) => {
+    const method = ctx.request.method;
+    const path = ctx.path;
+    const status = ctx.set.status;
+    logResponse(method, path, status ?? 500);
+  })
+  .onError((ctx) => {
+    const method = ctx.request.method;
+    const path = ctx.path;
+    logResponse(method, path, ctx.code)
+  })
   .get("/ping", () => {
     return "pong!";
+  })
+  .get("/server-error", () => {
+    throw new Error("fucked");
   })
   .get("/vaults", (ctx) => {
     const names = ctx.store.vaults.map((v) => v.getName());
@@ -132,7 +167,7 @@ export const app = new Elysia()
     })
   })
   // TODO - allow user to subscribe to vault events.
-  .ws("/stream", { 
+  .ws("/stream", {
 
   })
 
@@ -141,7 +176,6 @@ export type App = typeof app;
 export async function startAppWithVaults(vaults: Vault[], port: number): Promise<App> {
   await new Promise<void>((resolve) => {
     app.store.vaults = vaults;
-    app.use(Logestic.preset("common"));
     app.listen(port, () => {
       console.log(`Server started on localhost:${port}`);
       resolve()

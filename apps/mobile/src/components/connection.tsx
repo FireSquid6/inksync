@@ -25,7 +25,9 @@ export function AddConnectionForm() {
           <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
           <TextInput label="Directory Name" state={directoryName} onChange={setDirectoryName} />
           <div className="flex flex-row w-full">
-            <button onClick={() => {
+            <button 
+              type="button"
+              onClick={() => {
               const newConnections: Connection[] = [...connections, {
                 id: uuid(),
                 address,
@@ -35,7 +37,9 @@ export function AddConnectionForm() {
               }];
               setConnections(newConnections);
             }} className="btn btn-primary mt-16 ml-auto mr-4">Submit</button>
-            <button onClick={() => {
+            <button 
+              type="button"
+              onClick={() => {
               setVaultName("");
               setAddress("");
               setDirectoryName("");
