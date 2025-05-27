@@ -177,8 +177,25 @@ export class VaultClient {
       }
     }
   }
+
   peekAtFile(filepath: string): Promise<Blob> {
     return this.fs.readFrom(filepath);
+  }
+
+  async ping(): Promise<number | string> {
+    const start = Date.now();
+
+    try {
+      const res = await this.api.ping.get();
+      if (res.status !== 200) {
+        throw res.error;
+      }
+    } catch (e) {
+      return `Unable to connect to server: ${e}`;
+    }
+
+    const end = Date.now();
+    return end - start;
   }
 
   private async resolveConflict(filepath: string, serverUpdate: Update) {

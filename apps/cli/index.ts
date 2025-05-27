@@ -129,6 +129,26 @@ sync
     logResult(file, result);
   })
 
+sync
+  .command("ping")
+  .description("Pings the sync server")
+  .action(async () => {
+    const directory = process.cwd();
+    const client = getClient(directory);
+    if (client === null) {
+      console.log(`${directory} not connected to any vaults`);
+      return;
+    }
+
+    const result = await client.ping();
+
+    if (typeof result === "string") {
+      console.log(result);
+    } else {
+      console.log(`Success. ${result}ms round trip.`);
+    }
+  })
+
 const program = new Command()
 
 program.addCommand(sync);
