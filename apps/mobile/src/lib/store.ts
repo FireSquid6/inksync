@@ -105,20 +105,32 @@ export async function getMobileSqlite(address: string, vault: string): Promise<S
       }
     },
     async getLastPull(): Promise<number> {
-      const result = await db.query(`
-        SELECT id, time FROM ${pullTable}
-      `);
+      try {
+        const result = await db.query(`
+          SELECT id, time FROM ${pullTable}
+        `);
 
-      const lastPull = z.array(z.object({
-        id: z.string(),
-        time: z.number(),
-      })).parse(result.values);
+        const lastPull = z.array(z.object({
+          id: z.string(),
+          time: z.number(),
+        })).parse(result.values);
 
-      if (lastPull.length < 1) {
-        return 0;
+        if (lastPull.length < 1) {
+          return 0;
+        }
+
+        console.log("Got last pull:", result);
+        return lastPull[0]!.time;
+      } catch (e) {
+        if (e instanceof Error) {
+          console.log("Got a stupid error:")
+          console.log(e.name);
+          console.log(e.cause);
+          console.log(e.message);
+          console.log(e.stack);
+        }
+        throw e;
       }
-      
-      return lastPull[0]!.time;
     },
   }
 }

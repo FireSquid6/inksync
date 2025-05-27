@@ -243,16 +243,25 @@ export class VaultClient {
 
   private async getFreshServerUpdates(): Promise<Update[]> {
     const lastUpdate = await this.getLastServerPull();
-    const res = await this.api
-      .vaults({ vault: this.vault })
-      .updates
-      .get({ query: { since: lastUpdate } });
+    console.log("Got the last update:", lastUpdate);
+    try {
+      const res = await this.api
+        .vaults({ vault: this.vault })
+        .updates
+        .get({ query: { since: lastUpdate } });
 
-    if (res.status !== 200 || res.data === null) {
-      throw makeError(res.status, res.error);
+      if (res.status !== 200 || res.data === null) {
+        throw makeError(res.status, res.error);
+      }
+
+      return res.data;
+    } catch (e) {
+      const data = JSON.stringify(e);
+      console.log("error:");
+      console.log(data);
+      throw e;
+
     }
-
-    return res.data;
   }
 
   private async getAllModifiedFiles(): Promise<string[]> {
