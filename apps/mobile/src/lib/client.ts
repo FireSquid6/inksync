@@ -11,3 +11,4 @@ export async function getClient(connection: Connection): Promise<VaultClient> {
   return new VaultClient(connection.address, store, fs, connection.vaultName);
 
 }
+

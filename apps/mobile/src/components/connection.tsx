@@ -1,16 +1,19 @@
 import { type SyncResult } from "libinksync/client/results";
-import { type Connection, type ConnectionStatus } from "../lib/connection";
+import { connectionsAtom, useConnectionMutators, type Connection, type ConnectionStatus } from "../lib/connection";
 import { CgPushUp, CgPushDown, CgCheck, CgFileRemove } from "react-icons/cg";
 import { TbDeviceIpadCancel } from "react-icons/tb";
 import { LuServerOff } from "react-icons/lu";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { TextInput } from "./form";
+import { useAtom } from "jotai";
+import { v4 as uuid } from "uuid";
 
 export function AddConnectionForm() {
   const [vaultName, setVaultName] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [directoryName, setDirectoryName] = useState<string>("");
+  const [connections, setConnections] = useAtom(connectionsAtom);
 
   return (
       <div className="flex flex-col p-4">
@@ -22,8 +25,21 @@ export function AddConnectionForm() {
           <TextInput label="Vault Name" state={vaultName} onChange={setVaultName} />
           <TextInput label="Directory Name" state={directoryName} onChange={setDirectoryName} />
           <div className="flex flex-row w-full">
-            <button className="btn btn-primary mt-16 ml-auto mr-4">Submit</button>
-            <button className="btn mt-16 mr-auto ml-4">Reset</button>
+            <button onClick={() => {
+              const newConnections: Connection[] = [...connections, {
+                id: uuid(),
+                address,
+                vaultName,
+                syncDirectory: directoryName,
+                status: "behind",
+              }];
+              setConnections(newConnections);
+            }} className="btn btn-primary mt-16 ml-auto mr-4">Submit</button>
+            <button onClick={() => {
+              setVaultName("");
+              setAddress("");
+              setDirectoryName("");
+            }} className="btn mt-16 mr-auto ml-4">Reset</button>
           </div>
         </form>
       </div>
@@ -32,7 +48,16 @@ export function AddConnectionForm() {
 }
 
 export function ConnectionButton({ connection }: { connection: Connection }) {
-  // TODO - change color for status
+  const { syncConnection, fetchConnection } = useConnectionMutators(connection.id);
+
+  const onFetch = async () => {
+    await fetchConnection();
+
+  }
+  const onSync = async () => {
+    await syncConnection();
+  }
+
   return (
     <div className="bg-base-100 rounded-lg shadow-sm mb-3 p-4">
       <div className="flex justify-between items-start">
@@ -56,7 +81,14 @@ export function ConnectionButton({ connection }: { connection: Connection }) {
             Details
           </Link>
           <button
+            className="btn btn-primary btn-outline"
+            onClick={onFetch}
+          >
+            Fetch
+          </button>
+          <button
             className="btn btn-primary"
+            onClick={onSync}
           >
             Sync
           </button>

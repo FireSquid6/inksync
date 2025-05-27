@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { StatusBadge, SyncResultItem, formatDate } from "../components/connection";
-import { useConnectionWithId, useSetIsSyncing, useSyncConnection } from '../lib/connection';
-import { Link } from "@tanstack/react-router";
+import { useConnectionWithId, useConnectionMutators } from '../lib/connection';
+import { Link, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/$connection")({
   component: RouteComponent,
@@ -9,23 +9,23 @@ export const Route = createFileRoute("/$connection")({
 
 function RouteComponent() {
   const { connection: connectionId } = Route.useParams();
-
   const [connection, isSyncing] = useConnectionWithId(connectionId);
-  const syncConnection = useSyncConnection(connectionId);
-  const setIsSyncing = useSetIsSyncing(connectionId);
+  const { syncConnection, deleteConnection } = useConnectionMutators(connectionId);
 
   if (connection === null) {
     return notFound();
   }
 
   const handleSync = async () => {
-    setIsSyncing(true);
     await syncConnection();
-    setIsSyncing(false);
   }
 
   const handleDelete = () => {
-    console.log("Deleting...");
+    deleteConnection();
+    redirect({
+      to: "/",
+      throw: true,
+    });
   }
 
   return (

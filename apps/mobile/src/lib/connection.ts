@@ -88,30 +88,43 @@ export async function getClientFromConnection(connection: Connection): Promise<V
   return new VaultClient(connection.address, store, fs, connection.vaultName);
 }
 
-export function useSyncConnection(connectionId: string): () => Promise<void> {
+export function useConnectionMutators(connectionId: string) {
   const [connections, setConnections] = useAtom(connectionsAtom);
-
-  return async () => {
-    const connection = connections.find((c) => c.id === connectionId);
-    if (!connection) {
-      return;
-    }
-
-    const newConnection = await syncConnection(connection);
-
-    const newConnections = connections.filter((c) => c.id !== newConnection.id);
-    newConnections.push(newConnection);
-    setConnections(newConnections);
-  }
-}
-
-export function useSetIsSyncing(connectionId: string): (b: boolean) => void {
   const [isSyncing, setIsSyncing] = useAtom(isSyncingAtom);
 
-  return (n: boolean) => {
+  const setIsSyncingFunction = (n: boolean) => {
     let newIsSyncing = { ...isSyncing };
     newIsSyncing[connectionId] = n;
     setIsSyncing(newIsSyncing);
+  }
+
+  return {
+    async syncConnection() {
+      const connection = connections.find((c) => c.id === connectionId);
+      if (!connection) {
+        return;
+      }
+
+      setIsSyncingFunction(true);
+
+      const newConnection = await syncConnection(connection);
+
+      const newConnections = connections.filter((c) => c.id !== newConnection.id);
+      newConnections.push(newConnection);
+      setConnections(newConnections);
+
+      setIsSyncingFunction(false);
+    },
+    setIsSyncing(n: boolean) {
+      setIsSyncingFunction(n);
+    },
+    deleteConnection() {
+      const newConnections = connections.filter((c) => c.id !== connectionId);
+      setConnections(newConnections);
+    },
+    async fetchConnection() {
+
+    }
   }
 }
 
