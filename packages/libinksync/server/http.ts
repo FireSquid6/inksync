@@ -1,4 +1,4 @@
-import { type Vault } from "./vault";
+import { type Vault } from ".";
 import { Logestic } from "logestic";
 import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";

@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
-import { DirectoryVault, type FailedUpdate, type SuccessfulUpdate } from "../server/vault";
+import { type FailedUpdate, type SuccessfulUpdate } from "../server";
+import { DirectoryVault } from "../server/directory";
 import path from "path";
 
 

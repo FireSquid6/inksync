@@ -1,13 +1,12 @@
 import { treaty, type Treaty } from "@elysiajs/eden";
 import type { App } from "../server/http";
-import { BunSqliteStore, type Store, type Update } from "../store";
+import type { Store, Update } from "../store";
 import path from "path";
-import fs from "fs"
-import { DELETED_HASH, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE, STORE_DATABASE_FILE } from "../constants";
+import { DELETED_HASH, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE } from "../constants";
 import { type SyncResult } from "./results";
 import { encodeFilepath } from "../encode";
-import { hashBlob, type SuccessfulUpdate } from "../server/vault";
-import { DirectoryFilesystem, type Filesystem } from "../filesystem";
+import { hashBlob, type SuccessfulUpdate } from "../server";
+import type { Filesystem } from "../filesystem";
 import { silentLogger, type Logger } from "../logger";
 import { isIgnored } from "./ignorelist";
 
@@ -364,19 +363,22 @@ export class VaultClient {
   }
 
   private getSyncStatus(clientUpdate: Update | "UNTRACKED", serverUpdate: Update | "UNTRACKED"): "in-sync" | "out-of-sync" | "fucked" {
-
-    
     if (clientUpdate === "UNTRACKED" || serverUpdate === "UNTRACKED") {
-      const clientUntracked = clientUpdate === "UNTRACKED";
-      const serverUntracked = serverUpdate === "UNTRACKED";
-
-      if (clientUntracked && serverUntracked) {
-        return "in-sync";
-      } else if (clientUntracked && !serverUntracked) {
-        return "fucked"
-      } else if (!clientUntracked && serverUntracked) {
-        return "out-of-sync";
-      }           
+      // TODO - why is this working?
+      // TODO - test with an untracked client update or server update
+      switch ([clientUpdate === "UNTRACKED", serverUpdate === "UNTRACKED"]) {
+        case [true, true]:
+          console.log("already in sync")
+          return "in-sync";
+        case [true, false]:
+          console.log("fucked")
+          return "fucked";
+        case [false, true]:
+          console.log("out of sync")
+          return "out-of-sync";
+        default:
+          break;
+      }
     }
 
     // we know that neither are "UNTRACKED"
@@ -456,15 +458,6 @@ function makeError(status: number, error: unknown): SyncResult {
 }
 
 
-export function getDirectoryClient(vaultName: string, address: string, directory: string, logger: Logger = silentLogger()) {
-  const filesystem = new DirectoryFilesystem(directory);
-  const dbPath = path.join(directory, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE);
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-
-  const store = new BunSqliteStore(dbPath);
-
-  return new VaultClient(address, store, filesystem, vaultName, logger);
-}
 
 function formatDate(date: Date | number): string {
   if (typeof date === "number") {

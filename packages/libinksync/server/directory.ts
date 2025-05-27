@@ -1,30 +1,11 @@
 import path from "path";
-import { BunSqliteStore, type Store, type Update } from "../store";
+import type { Store, Update } from "../store";
+import { BunSqliteStore } from "../store/bun-sqlite";
 import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
 import type { Filesystem } from "../filesystem";
 import { DirectoryFilesystem } from "../filesystem";
-
-export interface SuccessfulUpdate {
-  type: "success";
-  time: number;
-  newHash: string;
-}
-
-export interface FailedUpdate {
-  type: "failure";
-  reason: "Non-matching hash";
-}
-
-export type UpdateResult = SuccessfulUpdate | FailedUpdate
-
-export interface Vault {
-  pushUpdate(fileContents: Blob | "DELETE", filepath: string, currentHash: string): Promise<UpdateResult>;
-  getCurrent(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | Blob>;
-  getUpdateFor(filepath: string): Promise<Update | null>;
-  getUpdatesSince(time: number): Promise<Update[]>; 
-  getName(): string;
-  isAuthorized(token: string): Promise<boolean>;
-}
+import type { Vault, UpdateResult } from ".";
+import { hashBlob } from ".";
 
 // TODO - implement a mutex so all of these actions are put into a queue
 // TODO - implement a max file size
@@ -113,12 +94,3 @@ export class DirectoryVault implements Vault {
   }
 }
 
-
-export function hashBlob(blob: Blob | "DELETE"): string {
-  if (blob === "DELETE") {
-    return DELETED_HASH;
-  }
-  const hash = new Bun.CryptoHasher("sha256");
-  hash.update(blob);
-  return hash.digest("base64url");
-}

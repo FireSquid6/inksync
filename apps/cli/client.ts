@@ -1,7 +1,8 @@
 import path from "path";
 import fs from "fs";
 import { CLIENT_CONNECTFILE, INKSYNC_DIRECTORY_NAME } from "libinksync/constants";
-import { VaultClient, getDirectoryClient } from "libinksync/client";
+import { VaultClient } from "libinksync/client";
+import { getDirectoryClient } from "libinksync/client/directory";
 import { writeConnectfile, readConnectfile } from "libinksync/client/connectfile";
 import type { SyncResult } from "libinksync/client/results";
 import { consoleLogger } from "libinksync/logger";

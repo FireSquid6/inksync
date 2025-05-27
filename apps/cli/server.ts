@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { DirectoryVault, type Vault } from "libinksync/server/vault";
+import { DirectoryVault } from "libinksync/server/directory";
+import type { Vault } from "libinksync/server";
 import { startAppWithVaults } from "libinksync/server/http";
 
 

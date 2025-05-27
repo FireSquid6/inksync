@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
-import { getDirectoryClient } from "../client";
+import { getDirectoryClient } from "../client/directory";
 import { startAppWithVaults } from "../server/http";
-import { DirectoryVault } from "../server/vault";
+import { DirectoryVault } from "../server/directory";
 import path from "path";
 import fs from "fs";
 import { testdir } from "./setup.test";
