@@ -72,8 +72,8 @@ export function getIgnorePaths(ignoreFilename: string): string[] {
     }
   }
 
-  if (ignorePaths.find((v) => v === ".conflicts") === undefined) {
-    ignorePaths.push(".conflicts");
+  if (ignorePaths.find((v) => v === ".conflict") === undefined) {
+    ignorePaths.push(".conflict");
   }
 
   if (ignorePaths.find((v) => v === INKSYNC_DIRECTORY_NAME) === undefined) {
