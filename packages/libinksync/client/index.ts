@@ -445,7 +445,7 @@ function getUrlFromAddress(address: string) {
   const split = address.split(":");
 
   const dotSplit = split[0]!.split(".")
-  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" || dotSplit.length === 1 ? "http" : "https";
+  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" || split[0] === "10.0.2.2" || dotSplit.length === 1 ? "http" : "https";
 
   return `${protocol}://${address}`;
 }

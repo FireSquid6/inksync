@@ -62,7 +62,6 @@ export function getIgnorePaths(ignoreFilename: string): string[] {
   if (fs.existsSync(ignoreFilename)) {
     const lines = fs.readFileSync(ignoreFilename).toString().split("\n");
 
-
     for (const line of lines) {
       if (line.startsWith("#")) {
         continue;
@@ -93,30 +92,30 @@ export function readDirectoryRecursively(
 ): string[] {
   // Get the relative path from the root directory
   const relativePath = relativeBase || '.';
-  
+
   // Check if the directory itself is ignored
   if (isIgnored(relativePath, ignorePaths)) {
     return [];
   }
 
   const result: string[] = [];
-  
+
   try {
     // Read the directory contents
     const entries = fs.readdirSync(directoryPath);
-    
+
     // Process each entry in the directory
     for (const entry of entries) {
       const entryPath = path.join(directoryPath, entry);
       const relativeEntryPath = path.join(relativeBase, entry);
-      
+
       // Skip if the entry is ignored (using relative path)
       if (isIgnored(relativeEntryPath, ignorePaths)) {
         continue;
       }
-      
+
       const stats = fs.statSync(entryPath);
-      
+
       if (stats.isDirectory()) {
         // Recursively process subdirectories
         const subDirFiles = readDirectoryRecursively(entryPath, ignorePaths, rootDir, relativeEntryPath);
@@ -130,7 +129,7 @@ export function readDirectoryRecursively(
   } catch (error) {
     console.error(`Error reading directory ${directoryPath}:`, error);
   }
-  
+
   return result;
 }
 
