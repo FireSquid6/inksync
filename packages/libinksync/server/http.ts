@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import { Readable } from "stream";
+import { cors } from "@elysiajs/cors";
 
 function logResponse(method: string, path: string, code: number | string) {
   let marker = "+";
@@ -33,6 +34,7 @@ function logResponse(method: string, path: string, code: number | string) {
 export const app = new Elysia()
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
+  .use(cors())
 
   .onAfterResponse((ctx) => {
     const method = ctx.request.method;
