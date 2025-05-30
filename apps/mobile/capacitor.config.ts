@@ -5,9 +5,6 @@ const config: CapacitorConfig = {
   appName: 'inksync',
   webDir: 'dist',
   plugins: {
-    CapacitorHttp: {
-      enabled: true,
-    },
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       iosIsEncryption: true,

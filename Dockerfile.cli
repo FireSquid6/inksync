@@ -1,0 +1,23 @@
+# use the official Bun image
+# see all versions at https://hub.docker.com/r/oven/bun/tags
+FROM oven/bun:1 AS base
+
+# install and build
+FROM base AS build
+RUN mkdir -p /temp
+COPY . /temp
+WORKDIR /temp
+RUN bun install --frozen-lockfile
+RUN bun run apps/cli/scripts/build.ts
+
+# copy production dependencies and source code into final image
+FROM base AS release
+RUN mkdir -p /app
+WORKDIR /app
+COPY --from=build /temp/apps/cli/build/index.js .
+
+# run the app
+USER bun
+EXPOSE 3000/tcp
+RUN ls
+ENTRYPOINT [ "bun", "run", "index" ]
