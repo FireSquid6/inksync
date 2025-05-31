@@ -35,7 +35,6 @@ export const app = new Elysia()
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
   .use(cors())
-
   .onAfterResponse((ctx) => {
     const method = ctx.request.method;
     const path = ctx.path;

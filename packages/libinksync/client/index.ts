@@ -10,17 +10,6 @@ import type { Filesystem } from "../filesystem";
 import { silentLogger, type Logger } from "../logger";
 import { isIgnored } from "./ignorelist";
 
-
-export class HttpError {
-  code: number;
-  error: unknown;
-
-  constructor(code: number, error?: unknown) {
-    this.code = code;
-    this.error = error;
-  }
-}
-
 export type Status = "PULL NEEDED" | "CONFLICT" | "PUSH NEEDED"
 
 export class VaultClient {
@@ -199,14 +188,10 @@ export class VaultClient {
 
 
     } catch (e) {
-      if (e instanceof HttpError) {
-        return makeError(e.code, e.error);
-      } else {
-        return {
-          domain: "bad",
-          type: "client-error",
-          error: e,
-        }
+      return {
+        domain: "bad",
+        type: "client-error",
+        error: e,
       }
     }
   }
