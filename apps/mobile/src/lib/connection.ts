@@ -7,6 +7,7 @@ import { MobileFilesystem } from "./filesystem";
 import { Directory } from "@capacitor/filesystem";
 import { getMobileSqlite } from "./store";
 import { atomWithStorage } from "jotai/utils";
+import { getApiFromAddress } from "server/interface";
 
 export interface Connection {
   id: string,
@@ -85,7 +86,8 @@ export function makeConnection(address: string, vaultName: string, directoryName
 export async function getClientFromConnection(connection: Connection): Promise<VaultClient> {
   const fs = new MobileFilesystem(connection.syncDirectory, Directory.Documents);
   const store = await getMobileSqlite(connection.address, connection.vaultName);
-  return new VaultClient(connection.address, store, fs, connection.vaultName);
+  const api = getApiFromAddress(connection.address, connection.vaultName);
+  return new VaultClient(store, fs, api);
 }
 
 export function useConnectionMutators(connectionId: string) {

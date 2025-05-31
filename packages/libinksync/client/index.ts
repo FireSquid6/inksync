@@ -25,6 +25,10 @@ export class VaultClient {
     this.logger = logger;
   }
 
+  getAddress() {
+    return this.vault.getAddress();
+  }
+
   getVault() {
     return this.vault.getName();
   }

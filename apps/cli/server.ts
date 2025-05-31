@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { DirectoryVault } from "libinksync/server/directory";
-import type { Vault } from "libinksync/server";
-import { startAppWithVaults } from "libinksync/server/http";
+import { Vault, vaultFromDirectory } from "libinksync/server";
+import { startAppWithVaults } from "server/http";
 
 
 export const baseVaultSchema = z.object({
@@ -21,13 +20,13 @@ export type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 export async function startServer(config: ServerConfig) {
   const port = config.port ?? 8320;
-  const vaults: Vault[] = config.vaults.map((v) => {
+  const vaults: Vault[] = await Promise.all(config.vaults.map(async (v) => {
     switch (v.type) {
       case "filesystem":
-        return new DirectoryVault(v.name, v.directory);
+        return await vaultFromDirectory(v.name, v.directory);
       //...
     }
-  });
+  }));
 
   await startAppWithVaults(vaults, port);
 }

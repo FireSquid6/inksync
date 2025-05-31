@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import { getDirectoryClient } from "../client/directory";
-import { startAppWithVaults } from "../server/http";
-import { DirectoryVault } from "../server/directory";
+import { startAppWithVaults } from "server/http";
+import { vaultFromDirectory } from "../server";
 import path from "path";
 import fs from "fs";
 import { testdir } from "./setup.test";
@@ -11,7 +11,7 @@ test("basic client update", async () => {
   const vaultDir = path.join(testdir, "server-a");
   const clientDir = path.join(testdir, "client-a-1");
 
-  const vault = new DirectoryVault("vault", vaultDir);
+  const vault = await vaultFromDirectory("vault", vaultDir);
 
   const app = await startAppWithVaults([vault], 8471);
   const client = getDirectoryClient("vault", "localhost:8471", clientDir);
@@ -40,7 +40,7 @@ test("mulitple clients syncing a file", async () => {
   const client1Dir = path.join(testdir, "client-b-1");
   const client2Dir = path.join(testdir, "client-b-2");
 
-  const vault = new DirectoryVault("vault", vaultDir);
+  const vault = await vaultFromDirectory("vault", vaultDir);
 
   const app = await startAppWithVaults([vault], 8471);
   const client1 = getDirectoryClient("vault", "localhost:8471", client1Dir);
@@ -76,7 +76,7 @@ test("conflict resolution", async () => {
   const client1Dir = path.join(testdir, "client-c-1");
   const client2Dir = path.join(testdir, "client-c-2");
 
-  const vault = new DirectoryVault("vault", vaultDir);
+  const vault = await vaultFromDirectory("vault", vaultDir);
 
   const app = await startAppWithVaults([vault], 8471);
   const client1 = getDirectoryClient("vault", "localhost:8471", client1Dir);

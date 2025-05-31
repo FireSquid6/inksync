@@ -1,13 +1,13 @@
 import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
 import { type FailedUpdate, type SuccessfulUpdate } from "../server";
-import { DirectoryVault } from "../server/directory";
 import path from "path";
+import { vaultFromDirectory } from "libinksync/server";
 
 
 test("pushing updates", async () => {
   const dir = path.join(testdir, "test-vault1");
-  const vault = new DirectoryVault("vault", dir);
+  const vault = await vaultFromDirectory("vault", dir);
   const filepath = "students/jdeiss/information.json";
   const contentsString = `
   {
@@ -68,7 +68,7 @@ test("tracking updates", async () => {
 
   const contents1 = new Blob([contentsString1]);
   const contents2 = new Blob([contentsString2]);
-  const vault = new DirectoryVault("vault", dir);
+  const vault = await vaultFromDirectory("vault", dir);
   const filepath = "students/jdeiss/information.json";
 
   let firstUpdate = await vault.pushUpdate(contents1, filepath, "");
@@ -105,7 +105,7 @@ test("tracking updates that are the same", async () => {
   const contents1 = new Blob([contentsString]);
   const contents2 = new Blob([contentsString]);
 
-  const vault = new DirectoryVault("vault", dir);
+  const vault = await vaultFromDirectory("vault", dir);
   const filepath = "students/jdeiss/information.json";
 
   let firstUpdate = await vault.pushUpdate(contents1, filepath, "");
@@ -123,7 +123,7 @@ test("making bad updates", async () => {
   const dir = path.join(testdir, "test-vault4");
   const firstWriteAttempt = new Blob(["hello!"]);
   const secondWriteAttempt = new Blob(["goodbye!"]);
-  const vault = new DirectoryVault("vault", dir);
+  const vault = await vaultFromDirectory("vault", dir);
   const filepath = "message.txt";
   
   let firstUpdate = await vault.pushUpdate(firstWriteAttempt, filepath, "");
