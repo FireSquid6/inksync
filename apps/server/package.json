@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.44.1",
+    "libinksync": "*",
     "yaml": "^2.8.0"
   }
 }

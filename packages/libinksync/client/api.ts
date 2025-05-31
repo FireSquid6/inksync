@@ -1,13 +1,19 @@
-
 // functions in Api should always return an error rather than failing
 
+import type { SuccessfulUpdate } from "../server";
 import type { Update } from "../store";
 
-// if they fail to communicate with the server
+// only returns the happy path!
+// throws errors when things g owrong
 export interface VaultApi {
-  ping(): Promise<string | Error>;
-  updatesSince(time: number): Promise<Update[] | Error>;
-  uploadFile(filepath: string, currentHash: string, file: File | "DELETE"): Promise<Update[] | Error>;
-  
-  
+  getName(): string;
+  ping(): Promise<string>;
+  updatesSince(time: number): Promise<Update[]>;
+  uploadFile(filepath: string, currentHash: string, file: File | "DELETE"): Promise<SuccessfulUpdate>;
+  getFile(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | ArrayBuffer>; 
+
+  // TODO
+  getFileStream(filepath: string): Promise<"DELETED" | "NON-EXISTANT" | ReadableStream>;
+  getUpdate(filepath: string): Promise<"UNTRACKED" | Update>;
 }
+

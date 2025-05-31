@@ -1,30 +1,46 @@
 import path from "path";
-import type { Store, Update } from "../store";
-import { BunSqliteStore } from "../store/bun-sqlite";
-import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "../constants";
-import type { Filesystem } from "../filesystem";
-import { DirectoryFilesystem } from "../filesystem";
-import type { Vault, UpdateResult } from ".";
-import { hashBlob } from ".";
+import type { Store, Update } from "./store";
+import { BunSqliteStore } from "./store/bun-sqlite";
+import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "./constants";
+import type { Filesystem } from "./filesystem";
+import { DirectoryFilesystem } from "./filesystem";
 
-// TODO - implement a mutex so all of these actions are put into a queue
-// TODO - implement a max file size
-export class DirectoryVault implements Vault {
+
+export interface SuccessfulUpdate {
+  type: "success";
+  time: number;
+  newHash: string;
+}
+
+export interface FailedUpdate {
+  type: "failure";
+  reason: "Non-matching hash";
+}
+
+export type UpdateResult = SuccessfulUpdate | FailedUpdate
+
+
+export async function vaultFromDirectory(name: string, directory: string) {
+  const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
+  const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
+
+  const fs = new DirectoryFilesystem(directory);
+  await fs.mkdir(path.dirname(dbPath));
+
+  const store = new BunSqliteStore(dbPath);
+
+  return new Vault(name, store, fs);
+}
+
+export class Vault {
   private store: Store;
-  private directory: string;
   private name: string;
   private fs: Filesystem;
 
-  constructor(name: string, directory: string) {
-    const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
-    const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
+  constructor(name: string, store: Store, fs: Filesystem) {
     this.name = name;
-    this.directory = directory;
-
-    this.fs = new DirectoryFilesystem(this.directory);
-    this.fs.mkdir(path.dirname(dbPath));
-
-    this.store = new BunSqliteStore(dbPath);
+    this.store = store;
+    this.fs = fs;
   }
 
   getName() {
@@ -94,3 +110,12 @@ export class DirectoryVault implements Vault {
   }
 }
 
+
+export function hashBlob(blob: Blob | "DELETE"): string {
+  if (blob === "DELETE") {
+    return DELETED_HASH;
+  }
+  const hash = new Bun.CryptoHasher("sha256");
+  hash.update(blob);
+  return hash.digest("base64url");
+}

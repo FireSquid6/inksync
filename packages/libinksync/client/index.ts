@@ -1,43 +1,32 @@
-import { treaty, type Treaty } from "@elysiajs/eden";
-import type { App } from "../server/http";
 import type { Store, Update } from "../store";
 import path from "path";
 import { DELETED_HASH, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE } from "../constants";
 import { type SyncResult } from "./results";
-import { encodeFilepath } from "../encode";
 import { hashBlob, type SuccessfulUpdate } from "../server";
 import type { Filesystem } from "../filesystem";
 import { silentLogger, type Logger } from "../logger";
 import { isIgnored } from "./ignorelist";
+import type { VaultApi } from "./api";
 
 export type Status = "PULL NEEDED" | "CONFLICT" | "PUSH NEEDED"
 
 export class VaultClient {
   private fs: Filesystem;
-  private api: Treaty.Create<App>;
   private store: Store;
-  private url: string;
-  private vault: string;
-  private address: string;
+  private vault: VaultApi;
   private logger: Logger
 
 
-  constructor(address: string, store: Store, fs: Filesystem, vault: string, logger: Logger = silentLogger()) {
+  constructor(store: Store, fs: Filesystem, vault: VaultApi, logger: Logger = silentLogger()) {
     this.fs = fs;
-    this.address = address;
     this.vault = vault;
-    this.url = getUrlFromAddress(address);
 
-    this.api = treaty<App>(this.url);
     this.store = store;
     this.logger = logger;
   }
 
   getVault() {
-    return this.vault;
-  }
-  getAddress() {
-    return this.address;
+    return this.vault.getName();
   }
 
   async status(): Promise<[string, Status][]> {
@@ -125,7 +114,7 @@ export class VaultClient {
       }
 
       const clientUpdate = await this.store.getRecord(filepath) ?? "UNTRACKED";
-      const serverUpdate = knownServerUpdate ?? await this.getServerUpdate(filepath);
+      const serverUpdate = knownServerUpdate ?? await this.vault.getUpdate(filepath);
       const isModified = await this.isFileModified(filepath, clientUpdate);
       const syncStatus = this.getSyncStatus(clientUpdate, serverUpdate);
 
@@ -202,13 +191,9 @@ export class VaultClient {
 
   async ping(): Promise<number | string> {
     const start = Date.now();
-
-    const res = await this.api.ping.get();
-    if (res.status !== 200) {
-      throw res.error;
-    }
-
+    await this.vault.ping();
     const end = Date.now();
+
     return end - start;
   }
 
@@ -228,25 +213,9 @@ export class VaultClient {
 
   private async getFreshServerUpdates(): Promise<Update[]> {
     const lastUpdate = await this.getLastServerPull();
-    console.log("Got the last update:", lastUpdate);
-    try {
-      const res = await this.api
-        .vaults({ vault: this.vault })
-        .updates
-        .get({ query: { since: lastUpdate } });
+    const updates = await this.vault.updatesSince(lastUpdate);
 
-      if (res.status !== 200 || res.data === null) {
-        throw makeError(res.status, res.error);
-      }
-
-      return res.data;
-    } catch (e) {
-      const data = JSON.stringify(e);
-      console.log("error:");
-      console.log(data);
-      throw e;
-
-    }
+    return updates;
   }
 
   private async getAllModifiedFiles(): Promise<string[]> {
@@ -278,7 +247,8 @@ export class VaultClient {
   }
 
   private async applyServerUpdate(update: Update) {
-    const file = await this.getServerFile(update.filepath);
+    const file = await this.vault.getFile(update.filepath);
+
     if (typeof file === "string") {
       if (await this.fs.exists(update.filepath)) {
         await this.fs.remove(update.filepath);
@@ -299,47 +269,10 @@ export class VaultClient {
       file = new File([blob], filename, { type: blob.type, lastModified: Date.now() });
     }
 
-    const res = await this.api
-      .vaults({ vault: this.vault })
-      .files({ filepath: encodeFilepath(filepath) })
-      .post({
-        currentHash: hash,
-        file,
-      })
-
-    if (res.status !== 200 || res.data === null) {
-      throw makeError(res.status, res.error);
-    }
-
-    return res.data;
+    return await this.vault.uploadFile(filepath, hash, file);
   }
 
-  private async getServerUpdate(filepath: string): Promise<"UNTRACKED" | Update> {
-    const res = await this.api
-      .vaults({ vault: this.vault })
-      .updates({ filepath: encodeFilepath(filepath) })
-      .get();
 
-    if (res.status !== 200 || res.data === null) {
-      throw makeError(res.status, res.error);
-    }
-
-    return res.data
-  }
-
-  private async getServerFile(filepath: string): Promise<ArrayBuffer | "DELETED" | "NON-EXISTANT"> {
-    const res = await this.api
-      .vaults({ vault: this.vault })
-      .files({ filepath: encodeFilepath(filepath) })
-      .get();
-
-    if (res.status !== 200 || res.data === null) {
-      throw makeError(res.status, res.error);
-    }
-
-
-    return res.data;
-  }
 
   private async isFileModified(filepath: string, clientUpdate: Update | "UNTRACKED"): Promise<boolean> {
     if (!(await this.fs.exists(filepath))) {
@@ -424,33 +357,6 @@ export class VaultClient {
     return await this.store.getLastPull();
   }
 }
-
-
-function getUrlFromAddress(address: string) {
-  const split = address.split(":");
-
-  const dotSplit = split[0]!.split(".")
-  const protocol = split[0] === "127.0.0.1" || split[0] === "localhost" || dotSplit.length === 1 ? "http" : "https";
-
-  return `${protocol}://${address}`;
-}
-
-function makeError(status: number, error: unknown): SyncResult {
-  if (status >= 500) {
-    return {
-      domain: "bad",
-      type: "server-error",
-      error,
-    }
-  } else {
-    return {
-      domain: "bad",
-      type: "client-error",
-      error,
-    }
-  }
-}
-
 
 
 function formatDate(date: Date | number): string {
