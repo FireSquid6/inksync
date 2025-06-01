@@ -1,20 +1,20 @@
 import { test, expect } from "bun:test";
 import { getDirectoryClient } from "../client/directory";
-import { startAppWithVaults } from "server/http";
 import { vaultFromDirectory } from "../server";
 import path from "path";
 import fs from "fs";
 import { testdir } from "./setup.test";
 import type { Conflict } from "../client/results";
+import { directApi } from "../client/api";
 
 test("basic client update", async () => {
   const vaultDir = path.join(testdir, "server-a");
   const clientDir = path.join(testdir, "client-a-1");
 
   const vault = await vaultFromDirectory("vault", vaultDir);
+  const api = directApi(vault);
 
-  const app = await startAppWithVaults([vault], 8471);
-  const client = getDirectoryClient("vault", "localhost:8471", clientDir);
+  const client = getDirectoryClient(api, clientDir);
 
   const newFilePath = path.join(clientDir, "my-file.txt");
   fs.writeFileSync(newFilePath, "Hello, world!");
@@ -30,8 +30,6 @@ test("basic client update", async () => {
   // do the same thing. It should just be boring
   const res2 = await client.syncFile("my-file.txt");
   expect(res2).toEqual({ type: "in-sync", domain: "good" });
-
-  app.stop();
 });
 
 
@@ -42,9 +40,9 @@ test("mulitple clients syncing a file", async () => {
 
   const vault = await vaultFromDirectory("vault", vaultDir);
 
-  const app = await startAppWithVaults([vault], 8471);
-  const client1 = getDirectoryClient("vault", "localhost:8471", client1Dir);
-  const client2 = getDirectoryClient("vault", "localhost:8471", client2Dir);
+  const api = directApi(vault);
+  const client1 = getDirectoryClient(api, client1Dir);
+  const client2 = getDirectoryClient(api, client2Dir);
 
   const newFilePath = path.join(client1Dir, "my-file.txt");
   fs.writeFileSync(newFilePath, "Hello, world!");
@@ -67,7 +65,6 @@ test("mulitple clients syncing a file", async () => {
   const peeked = await client2.peekAtFile("my-file.txt");
   expect(await peeked.text()).toBe("Hello, world!");
 
-  app.stop();
 });
 
 
@@ -78,9 +75,9 @@ test("conflict resolution", async () => {
 
   const vault = await vaultFromDirectory("vault", vaultDir);
 
-  const app = await startAppWithVaults([vault], 8471);
-  const client1 = getDirectoryClient("vault", "localhost:8471", client1Dir);
-  const client2 = getDirectoryClient("vault", "localhost:8471", client2Dir);
+  const api = directApi(vault);
+  const client1 = getDirectoryClient(api, client1Dir);
+  const client2 = getDirectoryClient(api, client2Dir);
 
   fs.writeFileSync(path.join(client1Dir, "my-file.txt"), "Hello, world!");
 
@@ -102,5 +99,4 @@ test("conflict resolution", async () => {
   const text = fs.readFileSync(path.join(client2Dir, syncRes.conflictFile)).toString();
   expect(text).toBe("Goodbye, world!");
 
-  app.stop();
 });

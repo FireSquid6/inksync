@@ -1,51 +1,18 @@
-import { type Vault } from "libinksync/server";
-import { decodeFilepath } from "./encode";
+import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
+import { loggerPlugin } from "./logger";
+import { vaultsPlugin } from "./vaults";
 
-function logResponse(method: string, path: string, code: number | string) {
-  let marker = "+";
-
-  while (method.length < 5) {
-    method = method + " ";
-  }
-
-  if (typeof code === "number" && code >= 400) {
-    if (code < 500) {
-      marker = "-";
-    } else {
-      marker = "!";
-    }
-  } else {
-    if (code === "INTERNAL_SERVER_ERROR" || code === "UNKNOWN" || code === "INVALID_COOKIE_SIGNATURE") {
-      marker = "!";
-    } else {
-      marker = "-";
-    }
-  }
-
-  console.log(`${marker} ${method} ${path} -> ${code}`);
-}
 
 export const app = new Elysia()
-  .state("vaults", [] as Vault[])
-  .state("tempfiles", new Map<string, number>)
+  .use(vaultsPlugin)
+  .use(loggerPlugin)
   .use(cors())
-  .onAfterResponse((ctx) => {
-    const method = ctx.request.method;
-    const path = ctx.path;
-    const status = ctx.set.status;
-    logResponse(method, path, status ?? 500);
-  })
-  .onError((ctx) => {
-    const method = ctx.request.method;
-    const path = ctx.path;
-    logResponse(method, path, ctx.code)
-  })
   .get("/ping", () => {
     return "pong!";
   })
@@ -53,14 +20,14 @@ export const app = new Elysia()
     throw new Error("fucked");
   })
   .get("/vaults", (ctx) => {
-    const names = ctx.store.vaults.map((v) => v.getName());
+    const names = ctx.getAllNames();
     return names;
   })
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
-    const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
+    const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
-      return ctx.error(404, `Vault ${vaultName} not found`);
+      return ctx.status(404, `Vault ${vaultName} not found`);
     }
     const fp = decodeFilepath(filepath);
     const { file, currentHash } = ctx.body;
@@ -70,7 +37,7 @@ export const app = new Elysia()
       return result;
     }
 
-    return ctx.error(400, `Failed to upload: ${result.reason}`);
+    return ctx.status(400, `Failed to upload: ${result.reason}`);
   }, {
     params: t.Object({
       vault: t.String(),
@@ -83,9 +50,9 @@ export const app = new Elysia()
   })
   .get("/vaults/:vault/files/:filepath", async (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
-    const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
+    const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
-      return ctx.error(404, `Vault ${vaultName} not found`);
+      return ctx.status(404, `Vault ${vaultName} not found`);
     }
     const fp = decodeFilepath(filepath);
 
@@ -103,13 +70,12 @@ export const app = new Elysia()
 
   })
   .get("/vaults/:vault/updates", (ctx) => {
-    const { vaults } = ctx.store;
     const { vault: vaultName } = ctx.params;
-    const vault = vaults.find((v) => v.getName() === vaultName);
+    const vault = ctx.getVaultByName(vaultName);
     const timestamp = ctx.query.since ?? 0;
 
     if (!vault) {
-      return ctx.error(404, `Vault ${vaultName} not found`);
+      return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
     const updates = vault.getUpdatesSince(timestamp);
@@ -124,9 +90,9 @@ export const app = new Elysia()
   })
   .get("/vaults/:vault/updates/:filepath", (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
-    const vault = ctx.store.vaults.find((v) => v.getName() === vaultName);
-    if (vault === undefined) {
-      return ctx.error(404, `Vault ${vaultName} not found`);
+    const vault = ctx.getVaultByName(vaultName);
+    if (!vault) {
+      return ctx.status(404, `Vault ${vaultName} not found`);
     }
     const fp = decodeFilepath(filepath);
 
@@ -143,7 +109,7 @@ export const app = new Elysia()
     const { lifetime, file } = ctx.body;
 
     if (lifetime < 0 || lifetime > 7200) {
-      return ctx.error(400, `Lifetime must be greater than 0 and less than 7200`);
+      return ctx.status(400, `Lifetime must be greater than 0 and less than 7200`);
     }
 
     const filename = randomUUID();
@@ -160,7 +126,7 @@ export const app = new Elysia()
     });
 
     if (error !== "OK") {
-      return ctx.error(500, `Stream error: ${error.message} ${error.stack} ${error.name} ${error.cause}`);
+      return ctx.status(500, `Stream error: ${error.message} ${error.stack} ${error.name} ${error.cause}`);
     }
 
     return filename;
@@ -174,20 +140,17 @@ export const app = new Elysia()
   .ws("/stream", {
 
   })
+  .post("/users", {
+
+  })
+  .get("/users/:id", {
+
+  })
+  .delete("/users/:id", {
+
+  })
 
 export type App = typeof app;
-
-export async function startAppWithVaults(vaults: Vault[], port: number): Promise<App> {
-  await new Promise<void>((resolve) => {
-    app.store.vaults = vaults;
-    app.listen(port, () => {
-      console.log(`Server started on localhost:${port}`);
-      resolve()
-    });
-  });
-
-  return app;
-}
 
 function fileToReadable(file: File): Readable {
   const reader = file.stream().getReader();

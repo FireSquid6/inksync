@@ -6,6 +6,7 @@ import { getDirectoryClient } from "libinksync/client/directory";
 import { writeConnectfile, readConnectfile } from "libinksync/client/connectfile";
 import type { SyncResult } from "libinksync/client/results";
 import { consoleLogger } from "libinksync/logger";
+import { getApiFromAddress } from "server/interface";
 
 
 export function getClient(directory: string): VaultClient | null {
@@ -17,7 +18,8 @@ export function getClient(directory: string): VaultClient | null {
 
   const connectfile = readConnectfile(connectfilePath);
 
-  const client = getDirectoryClient(connectfile.name, connectfile.address, directory, logger);
+  const api = getApiFromAddress(connectfile.address, connectfile.name);
+  const client = getDirectoryClient(api, directory, logger);
   return client;
 }
 
