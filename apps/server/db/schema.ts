@@ -37,8 +37,11 @@ export type Token = InferSelectModel<typeof tokensTable>;
 
 export const accessTable = sqliteTable("access", {
   userId: text().notNull().references(() => usersTable.id),
+  read: int({ mode: "boolean" }).notNull(),
+  write: int({ mode: "boolean" }).notNull(),
   vaultName: text().notNull().references(() => vaultsTable.name),
 });
+export type Access = InferSelectModel<typeof accessTable>;
 
 export const permissionTable = sqliteTable("permissions", {
   userId: text().notNull().references(() => usersTable.id),

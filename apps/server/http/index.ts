@@ -168,29 +168,6 @@ export const app = new Elysia()
   .ws("/stream", () => {
 
   })
-  .post("/users", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "User must be authenticated");
-    }
-
-  }, {
-    body: t.Object({
-      username: t.String(),
-      password: t.String(),
-    })
-  })
-  .get("/users/:id", () => {
-
-  })
-  .delete("/users/:id", () => {
-
-  })
-  .post("/tokens", () => {
-
-  })
-  .delete("/tokens/:id", () => {
-
-  })
 
 export type App = typeof app;
 
