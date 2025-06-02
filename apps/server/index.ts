@@ -1,7 +1,7 @@
 import { type Config } from "./config";
 import { app } from "./http";
 import { getDb } from "./db";
-import { elysiaVite } from "./http/vite";
+import { uiPlugin } from "./ui";
 
 export function startApp(config: Config) {
   const db = getDb(config);
@@ -9,13 +9,7 @@ export function startApp(config: Config) {
   app.store.config = config;
   
   if (config.serveUI) {
-    console.log("Using vite");
-    app.use(elysiaVite({
-      viteConfigFilePath: `${import.meta.dir}/ui/vite.config.ts`,
-      entryHtmlFile: `${import.meta.dir}/ui/index.html`,
-      entryClientFile: `${import.meta.dir}/ui/index.tsx`,
-      isReact: true,
-    }));
+    app.use(uiPlugin());
   }
 
   app.listen(config.port, () => {
