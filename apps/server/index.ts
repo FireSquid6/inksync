@@ -1,12 +1,8 @@
-import { getConfigFromFile, getConfigFromPartial } from "./config";
+import { getConfigFromFile } from "./config";
 import { app } from "./http";
-import { getDb, getVaultFromInfo } from "./db";
-import { vaultsTable, type VaultInfo } from "./db/schema";
-import type { Vault } from "libinksync/server";
-
+import { getDb } from "./db";
 
 export function startApp() {
-  // TODO
   const configPath = process.env.INKSYNC_CONFIG_PATH ?? "./inksync-server-config.yaml";
   const config = getConfigFromFile(configPath);
 
@@ -20,25 +16,3 @@ export function startApp() {
   return app;
 }
 
-export async function startAppWithVaults(vaultInfos: VaultInfo[], port: number) {
-  const config = getConfigFromPartial({
-    port,
-    doAuthentication: false,
-    databasePath: ":memory:",
-  });
-  const db = getDb(config); 
-
-  await db
-    .insert(vaultsTable)
-    .values(vaultInfos);
-
-  const vaults: Vault[] = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i)));
-  app.store.db = db;
-  app.store.vaults = vaults;
-
-  app.listen(config.port, () => {
-    console.log(`App started on ${config.port}`);
-  });
-
-  return app;
-}
