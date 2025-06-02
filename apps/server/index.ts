@@ -1,6 +1,7 @@
 import { type Config } from "./config";
 import { app } from "./http";
 import { getDb } from "./db";
+import { uiPlugin } from "./http/ui";
 
 export function startApp(config: Config) {
   const db = getDb(config);
@@ -8,6 +9,7 @@ export function startApp(config: Config) {
   app.store.config = config;
   
   if (config.serveUI) {
+    app.use(uiPlugin());
   }
 
   app.listen(config.port, () => {

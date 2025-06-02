@@ -26,5 +26,5 @@ export function getDb(config: Config) {
 
 
 export function getVaultFromInfo(info: VaultInfo): Promise<Vault> {
-  return vaultFromDirectory(info.name, info.directory);
+  return vaultFromDirectory(info.name, info.location);
 }

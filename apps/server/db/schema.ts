@@ -8,6 +8,10 @@ export type PermissionType =
   | "READ_VAULTS"
   | "WRITE_VAULTS"
 
+export type VaultType = 
+  | "directory"
+  | "s3-bucket"
+
 export const usersTable = sqliteTable("users_table", {
   id: text().notNull().unique().primaryKey(),
   username: text().notNull(),
@@ -21,7 +25,9 @@ export type InsertUser = InferInsertModel<typeof usersTable>;
 // TODO - handle encrypted vaults
 export const vaultsTable = sqliteTable("vaults", {
   name: text().unique().primaryKey(),
-  directory: text().notNull(),
+  type: text().notNull().$type<VaultType>(),
+  address: text(),
+  location: text().notNull(),
 });
 
 export type VaultInfo = InferSelectModel<typeof vaultsTable>;

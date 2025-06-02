@@ -11,14 +11,49 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as VaultsImport } from './routes/vaults'
+import { Route as UsersImport } from './routes/users'
+import { Route as AuthImport } from './routes/auth'
 import { Route as IndexImport } from './routes/index'
+import { Route as VaultsVaultImport } from './routes/vaults/$vault'
+import { Route as UsersUserImport } from './routes/users/$user'
 
 // Create/Update Routes
+
+const VaultsRoute = VaultsImport.update({
+  id: '/vaults',
+  path: '/vaults',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const UsersRoute = UsersImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthRoute = AuthImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const VaultsVaultRoute = VaultsVaultImport.update({
+  id: '/$vault',
+  path: '/$vault',
+  getParentRoute: () => VaultsRoute,
+} as any)
+
+const UsersUserRoute = UsersUserImport.update({
+  id: '/$user',
+  path: '/$user',
+  getParentRoute: () => UsersRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -32,39 +67,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthImport
+      parentRoute: typeof rootRoute
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersImport
+      parentRoute: typeof rootRoute
+    }
+    '/vaults': {
+      id: '/vaults'
+      path: '/vaults'
+      fullPath: '/vaults'
+      preLoaderRoute: typeof VaultsImport
+      parentRoute: typeof rootRoute
+    }
+    '/users/$user': {
+      id: '/users/$user'
+      path: '/$user'
+      fullPath: '/users/$user'
+      preLoaderRoute: typeof UsersUserImport
+      parentRoute: typeof UsersImport
+    }
+    '/vaults/$vault': {
+      id: '/vaults/$vault'
+      path: '/$vault'
+      fullPath: '/vaults/$vault'
+      preLoaderRoute: typeof VaultsVaultImport
+      parentRoute: typeof VaultsImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface UsersRouteChildren {
+  UsersUserRoute: typeof UsersUserRoute
+}
+
+const UsersRouteChildren: UsersRouteChildren = {
+  UsersUserRoute: UsersUserRoute,
+}
+
+const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
+
+interface VaultsRouteChildren {
+  VaultsVaultRoute: typeof VaultsVaultRoute
+}
+
+const VaultsRouteChildren: VaultsRouteChildren = {
+  VaultsVaultRoute: VaultsVaultRoute,
+}
+
+const VaultsRouteWithChildren =
+  VaultsRoute._addFileChildren(VaultsRouteChildren)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/users': typeof UsersRouteWithChildren
+  '/vaults': typeof VaultsRouteWithChildren
+  '/users/$user': typeof UsersUserRoute
+  '/vaults/$vault': typeof VaultsVaultRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/users': typeof UsersRouteWithChildren
+  '/vaults': typeof VaultsRouteWithChildren
+  '/users/$user': typeof UsersUserRoute
+  '/vaults/$vault': typeof VaultsVaultRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/users': typeof UsersRouteWithChildren
+  '/vaults': typeof VaultsRouteWithChildren
+  '/users/$user': typeof UsersUserRoute
+  '/vaults/$vault': typeof VaultsVaultRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/users'
+    | '/vaults'
+    | '/users/$user'
+    | '/vaults/$vault'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/auth' | '/users' | '/vaults' | '/users/$user' | '/vaults/$vault'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/users'
+    | '/vaults'
+    | '/users/$user'
+    | '/vaults/$vault'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  UsersRoute: typeof UsersRouteWithChildren
+  VaultsRoute: typeof VaultsRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  UsersRoute: UsersRouteWithChildren,
+  VaultsRoute: VaultsRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -77,11 +202,37 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/"
+        "/",
+        "/auth",
+        "/users",
+        "/vaults"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/auth": {
+      "filePath": "auth.tsx"
+    },
+    "/users": {
+      "filePath": "users.tsx",
+      "children": [
+        "/users/$user"
+      ]
+    },
+    "/vaults": {
+      "filePath": "vaults.tsx",
+      "children": [
+        "/vaults/$vault"
+      ]
+    },
+    "/users/$user": {
+      "filePath": "users/$user.tsx",
+      "parent": "/users"
+    },
+    "/vaults/$vault": {
+      "filePath": "vaults/$vault.tsx",
+      "parent": "/vaults"
     }
   }
 }
