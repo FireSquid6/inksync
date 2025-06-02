@@ -1,18 +1,13 @@
 import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";
-import { randomUUID } from "crypto";
-import path from "path";
-import fs from "fs";
 import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
 
-
-
 export const app = new Elysia()
-  .use(vaultsPlugin)
   .use(loggerPlugin)
+  .use(vaultsPlugin())
   .use(cors())
   .get("/ping", () => {
     return "pong!";

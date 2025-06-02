@@ -4,6 +4,7 @@ import { getVaultFromInfo, type Db } from "../db";
 import { accessTable, tokensTable, usersTable, vaultsTable, type User, type VaultInfo } from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";
+import type { Config } from "../config";
 
 
 export type AuthStatus =
@@ -31,10 +32,14 @@ export interface ExpiredToken {
 }
 
 
-export const vaultsPlugin = new Elysia()
+export const vaultsPlugin = () => {
+  return new Elysia({
+    name: "vaults-plugin",
+  })
   .state("vaults", [] as Vault[])
   .state("tempfiles", new Map<string, number>)
   .state("db", {} as Db)
+  .state("config", {} as Config)
   .use(bearer())
   .derive({ as: "global" }, (ctx) => {
     const { db, vaults } = ctx.store
@@ -135,4 +140,5 @@ export const vaultsPlugin = new Elysia()
       }
     }
   });
+}
 

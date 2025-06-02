@@ -7,6 +7,7 @@ export const configSchema = z.object({
   port: z.optional(z.number()),
   storeDirectory: z.optional(z.string()),
   databasePath: z.optional(z.string()),
+  serveUI: z.optional(z.boolean()),
 });
 
 export type PartialConfig = z.infer<typeof configSchema>;
@@ -31,5 +32,7 @@ export function getConfigFromPartial(partialConfig: PartialConfig): Config {
     port: partialConfig.port ?? 3120,
     storeDirectory: partialConfig.storeDirectory ?? "./store",
     databasePath: partialConfig.databasePath ?? ":memory:",
+    serveUI: partialConfig.serveUI ?? true,
   }
 }
+

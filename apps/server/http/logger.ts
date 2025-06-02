@@ -16,22 +16,20 @@ function logResponse(method: string, path: string, code: number | string) {
   } else {
     if (code === "INTERNAL_SERVER_ERROR" || code === "UNKNOWN" || code === "INVALID_COOKIE_SIGNATURE") {
       marker = "!";
-    } else {
-      marker = "-";
-    }
+    } 
   }
 
   console.log(`${marker} ${method} ${path} -> ${code}`);
 }
 
 export const loggerPlugin = new Elysia()
-  .onAfterResponse((ctx) => {
+  .onAfterResponse({ as: "global" }, (ctx) => {
     const method = ctx.request.method;
     const path = ctx.path;
     const status = ctx.set.status;
     logResponse(method, path, status ?? 500);
   })
-  .onError((ctx) => {
+  .onError({ as: "global" }, (ctx) => {
     const method = ctx.request.method;
     const path = ctx.path;
     logResponse(method, path, ctx.code)
