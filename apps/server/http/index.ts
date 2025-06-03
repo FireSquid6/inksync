@@ -4,7 +4,6 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
-import { getVaultFromInfo } from "../db";
 import type { Access } from "../db/schema";
 
 export const app = new Elysia()
