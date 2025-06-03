@@ -108,6 +108,17 @@ export const vaultsPlugin = () => {
 
           return access.write;
         },
+        async getVaultInfo(vaultName: string): Promise<schema.VaultInfo | null> {
+          const infos = await db
+            .select()
+            .from(schema.vaultsTable)
+            .where(eq(schema.vaultsTable.name, vaultName))
+
+          if (infos.length !== 1) {
+            return null;
+          }
+          return infos[0]!;
+        },
         async getUser(userId: string): Promise<schema.User | null> {
           const users = await db
             .select()
@@ -247,10 +258,11 @@ export const vaultsPlugin = () => {
             .select()
             .from(schema.joincodeTable);
         },
-        async createVault(vaultName: string, directory: string): Promise<schema.VaultInfo> {
+        async createVault(vaultName: string, directory: string, userId: string): Promise<schema.VaultInfo> {
           const info: schema.VaultInfo = {
             name: vaultName,
             location: directory,
+            creator: userId,
             createdAt: Date.now(),
           }
           await db
@@ -282,9 +294,36 @@ export const vaultsPlugin = () => {
 
           return accesses[0]!;
         },
-        async updatePermission(access: Access) {
+        // this is very very bad!
+        async updatePermission(access: schema.Access) {
+          const exists = (await db
+            .select()
+            .from(schema.accessTable)
+            .where(and(
+              eq(schema.accessTable.userId, access.userId),
+              eq(schema.accessTable.vaultName, access.vaultName),
+            ))).length > 0;
 
+          if (exists) {
+            await db
+              .update(schema.accessTable)
+              .set(access)
+              .where(and(
+                eq(schema.accessTable.userId, access.userId),
+                eq(schema.accessTable.vaultName, access.vaultName),
+              ))
+          } else {
+            await db
+              .insert(schema.accessTable)
+              .values(access)
+          }
         },
+        async getAccess(vaultName: string) {
+          return await db
+            .select()
+            .from(schema.accessTable)
+            .where(eq(schema.accessTable.vaultName, vaultName))
+        }
       }
     })
     .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {

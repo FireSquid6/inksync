@@ -4,6 +4,8 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
+import { getVaultFromInfo } from "../db";
+import type { Access } from "../db/schema";
 
 export const app = new Elysia()
   .use(loggerPlugin)
@@ -48,7 +50,19 @@ export const app = new Elysia()
     })
   })
   .post("/vaults", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized");
+    }
+    const { user } = ctx.auth;
 
+    if (!(user.role === "Admin" || user.role === "Superadmin")) {
+      return ctx.status("Unauthorized", "Must be an admin to make new vaults");
+    }
+
+    const { vaultName, directory } = ctx.body;
+
+    const vault = await ctx.createVault(vaultName, directory, user.id);
+    return vault;
   }, {
     body: t.Object({
       vaultName: t.String(),
@@ -56,17 +70,65 @@ export const app = new Elysia()
     })
   })
   .get("/vaults/:vault", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated");
+    }
 
+    const info = await ctx.getVaultInfo(ctx.params.vault);
+    if (info === null) {
+      return ctx.status("Not Found", "This vault does not exist"); 
+    }
+
+    const user = ctx.auth.user;
+    if (!await ctx.canReadVault(user, ctx.params.vault)) {
+      return ctx.status("Unauthorized", "You cannot view this vault");
+    }
+
+    return info;
   })
-  .patch("/vaults/:vault/access", (ctx) => {
+  .get("/vaults/:vault/access", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated"); 
+    }
+    const vault = ctx.params.vault;
+    const user = ctx.auth.user;
+    if (!(await ctx.canReadVault(user, vault))) {
+      return ctx.status("Unauthorized", "You cannot read this vault");
+    }
 
+    return await ctx.getAccess(vault);
+  })
+  .patch("/vaults/:vault/access", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated"); 
+    }
+    const user = ctx.auth.user;
+
+    if (!(user.role === "Superadmin" || user.role === "Admin")) {
+      return ctx.status("Unauthorized", "Only admins and superadmins can modify vault perms");
+    }
+    const { permissions, vaultName } = ctx.body;
+    const info = await ctx.getVaultInfo(vaultName);
+    if (info === null) {
+      return ctx.status("Not Found", "Vault does not exist");
+    }
+
+    const access: Access[] = permissions.map((p) => {
+      return {
+        userId: p.userId,
+        read: p.read,
+        write: p.write,
+        vaultName,
+      }
+    });
+
+    await Promise.all(access.map((a) => ctx.updatePermission(a)));
   }, {
     body: t.Object({
       vaultName: t.String(),
       permissions: t.Array(t.Object({
         userId: t.String(),
         read: t.Boolean(),
-        meta: t.Boolean(),
         write: t.Boolean(),
       }))
     })

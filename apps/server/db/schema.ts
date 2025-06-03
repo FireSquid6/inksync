@@ -20,6 +20,7 @@ export type InsertUser = InferInsertModel<typeof usersTable>;
 export const vaultsTable = sqliteTable("vaults", {
   name: text().unique().primaryKey(),
   location: text().notNull(),
+  creator: text().notNull().references(() => usersTable.id),
   createdAt: int().notNull(),
 });
 
@@ -35,12 +36,13 @@ export const tokensTable = sqliteTable("tokens", {
 export type Token = InferSelectModel<typeof tokensTable>;
 
 export const accessTable = sqliteTable("access", {
+  id: int().primaryKey({ autoIncrement: true }),
   userId: text().notNull().references(() => usersTable.id),
   read: int({ mode: "boolean" }).notNull(),
   write: int({ mode: "boolean" }).notNull(),
   vaultName: text().notNull().references(() => vaultsTable.name),
 });
-export type Access = InferSelectModel<typeof accessTable>;
+export type Access = InferInsertModel<typeof accessTable>;
 
 
 export const joincodeTable = sqliteTable("joincodes", {
