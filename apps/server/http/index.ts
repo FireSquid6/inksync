@@ -24,7 +24,7 @@ export const app = new Elysia()
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
-    if (!(await ctx.canAccessVault(user, vaultName))) {
+    if (!(await ctx.canWriteVault(user, vaultName))) {
       return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
@@ -47,6 +47,30 @@ export const app = new Elysia()
       file: t.Union([t.File(), t.Literal("DELETE")]),
     })
   })
+  .post("/vaults", async (ctx) => {
+
+  }, {
+    body: t.Object({
+      vaultName: t.String(),
+      directory: t.String(),
+    })
+  })
+  .get("/vaults/:vault", async (ctx) => {
+
+  })
+  .patch("/vaults/:vault/access", (ctx) => {
+
+  }, {
+    body: t.Object({
+      vaultName: t.String(),
+      permissions: t.Array(t.Object({
+        userId: t.String(),
+        read: t.Boolean(),
+        meta: t.Boolean(),
+        write: t.Boolean(),
+      }))
+    })
+  })
   .get("/vaults/:vault/files/:filepath", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized", "You must be authenticated.");
@@ -59,7 +83,7 @@ export const app = new Elysia()
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
-    if (!(await ctx.canAccessVault(user, vaultName))) {
+    if (!(await ctx.canReadVault(user, vaultName))) {
       return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
@@ -91,7 +115,7 @@ export const app = new Elysia()
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
-    if (!(await ctx.canAccessVault(user, vaultName))) {
+    if (!(await ctx.canReadVault(user, vaultName))) {
       return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
@@ -117,7 +141,7 @@ export const app = new Elysia()
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
-    if (!(await ctx.canAccessVault(user, vaultName))) {
+    if (!(await ctx.canReadVault(user, vaultName))) {
       return ctx.status(404, "This user cannot access this vault");
     }
     const fp = decodeFilepath(filepath);

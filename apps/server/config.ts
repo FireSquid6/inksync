@@ -4,7 +4,6 @@ import YAML from "yaml";
 
 export const configSchema = z.object({
   port: z.optional(z.number()),
-  storeDirectory: z.optional(z.string()),
   databasePath: z.optional(z.string()),
   serveUI: z.optional(z.boolean()),
 });
@@ -28,7 +27,6 @@ export function getConfigFromFile(filepath?: string): Config {
 export function getConfigFromPartial(partialConfig: PartialConfig): Config {
   return {
     port: partialConfig.port ?? 3120,
-    storeDirectory: partialConfig.storeDirectory ?? "./store",
     databasePath: partialConfig.databasePath ?? ":memory:",
     serveUI: partialConfig.serveUI ?? true,
   }

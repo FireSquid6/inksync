@@ -2,7 +2,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import { text, int } from "drizzle-orm/sqlite-core";
 
-export type Role = 
+export type Role =
   | "User"
   | "Admin"
   | "Superadmin"

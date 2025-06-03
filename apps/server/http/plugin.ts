@@ -1,12 +1,13 @@
 import { Elysia } from "elysia";
 import { Vault } from "libinksync/vault";
 import { getVaultFromInfo, type Db } from "../db";
-import { accessTable, joincodeTable, tokensTable, usersTable, vaultsTable, type Role, type User, type VaultInfo, type Joincode } from "../db/schema";
+import * as schema from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";
 import type { Config } from "../config";
 import { randomUUID } from "crypto";
 import words from "an-array-of-english-words";
+import { localDate } from "drizzle-orm/gel-core";
 
 
 export type AuthStatus =
@@ -17,7 +18,7 @@ export type AuthStatus =
 
 export interface Authenticated {
   type: "authenticated";
-  user: User;
+  user: schema.User;
   token: string;
 }
 
@@ -44,15 +45,15 @@ export const vaultsPlugin = () => {
     .state("config", {} as Config)
     .use(bearer())
     .derive({ as: "global" }, (ctx) => {
-      const { db, vaults } = ctx.store
+      const { db, vaults, config } = ctx.store
       return {
         getVaultByName(name: string): Vault | null {
           const vault = vaults.find((v) => v.getName() === name);
           return vault ?? null;
         },
-        async addVault(vaultInfo: VaultInfo) {
+        async addVault(vaultInfo: schema.VaultInfo) {
           await db
-            .insert(vaultsTable)
+            .insert(schema.vaultsTable)
             .values(vaultInfo)
 
           const vault = await getVaultFromInfo(vaultInfo);
@@ -64,34 +65,54 @@ export const vaultsPlugin = () => {
         async regenerateVaults() {
           const vaultInfos = await db
             .select()
-            .from(vaultsTable)
+            .from(schema.vaultsTable)
 
           const newVaults = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i)));
           ctx.store.vaults = newVaults;
         },
-        async canAccessVault(user: User, vaultName: string): Promise<boolean> {
-          const { db } = ctx.store;
-          if (user.role === "Superadmin") {
+        async canReadVault(user: schema.User, vaultName: string): Promise<boolean> {
+          if (user.role === "Superadmin" || user.role === "Admin") {
             return true;
           }
 
-          const access = await db
+          const access = (await db
             .select()
-            .from(accessTable)
+            .from(schema.accessTable)
             .where(and(
-              eq(accessTable.userId, user.id),
-              eq(accessTable.vaultName, vaultName),
-            ))
+              eq(schema.accessTable.userId, user.id),
+              eq(schema.accessTable.vaultName, vaultName),
+            )))[0];
 
-          return access.length === 1;
+          if (access === undefined) {
+            return false;
+          }
+
+          return access.read;
         },
-        async getUser(userId: string): Promise<User | null> {
-          const { db } = ctx.store;
+        async canWriteVault(user: schema.User, vaultName: string): Promise<boolean> {
+          if (user.role === "Superadmin" || user.role === "Admin") {
+            return true;
+          }
 
+          const access = (await db
+            .select()
+            .from(schema.accessTable)
+            .where(and(
+              eq(schema.accessTable.userId, user.id),
+              eq(schema.accessTable.vaultName, vaultName),
+            )))[0];
+
+          if (access === undefined) {
+            return false;
+          }
+
+          return access.write;
+        },
+        async getUser(userId: string): Promise<schema.User | null> {
           const users = await db
             .select()
-            .from(usersTable)
-            .where(eq(usersTable.id, userId));
+            .from(schema.usersTable)
+            .where(eq(schema.usersTable.id, userId));
 
           if (users.length === 1) {
             return users[0]!;
@@ -99,27 +120,25 @@ export const vaultsPlugin = () => {
           return null;
         },
         async deleteUser(userId: string) {
-          const { db } = ctx.store;
+          await db
+            .delete(schema.usersTable)
+            .where(eq(schema.usersTable.id, userId));
 
           await db
-            .delete(usersTable)
-            .where(eq(usersTable.id, userId));
-
-          await db
-            .delete(tokensTable)
-            .where(eq(tokensTable.userId, userId));
+            .delete(schema.tokensTable)
+            .where(eq(schema.tokensTable.userId, userId));
         },
-        async changeUserRole(userId: string, newRole: Role) {
+        async changeUserRole(userId: string, newRole: schema.Role) {
           await db
-            .update(usersTable)
+            .update(schema.usersTable)
             .set({ role: newRole })
-            .where(eq(usersTable.id, userId));
+            .where(eq(schema.usersTable.id, userId));
         },
         async validateUsernamePassword(username: string, password: string): Promise<string | null> {
           const users = await db
             .select()
-            .from(usersTable)
-            .where(eq(usersTable.username, username));
+            .from(schema.usersTable)
+            .where(eq(schema.usersTable.username, username));
 
           if (users.length !== 1) {
             return null;
@@ -134,10 +153,9 @@ export const vaultsPlugin = () => {
         async makeNewToken(userId: string): Promise<string> {
           const token = newRandomToken();
           const expirationTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
-          const { db } = ctx.store;
 
           await db
-            .insert(tokensTable)
+            .insert(schema.tokensTable)
             .values({
               token,
               userId,
@@ -148,17 +166,17 @@ export const vaultsPlugin = () => {
         },
         async deleteToken(userId: string, token: string) {
           await db
-            .delete(tokensTable)
+            .delete(schema.tokensTable)
             .where(and(
-              eq(tokensTable.userId, userId),
-              eq(tokensTable.token, token),
+              eq(schema.tokensTable.userId, userId),
+              eq(schema.tokensTable.token, token),
             ));
         },
-        async createUser(username: string, password: string, code: string): Promise<User | null> {
+        async createUser(username: string, password: string, code: string): Promise<schema.User | null> {
           const joincodes = await db
             .select()
-            .from(joincodeTable)
-            .where(eq(joincodeTable.code, code));
+            .from(schema.joincodeTable)
+            .where(eq(schema.joincodeTable.code, code));
 
           if (joincodes.length !== 1) {
             return null;
@@ -168,7 +186,7 @@ export const vaultsPlugin = () => {
           const id = randomUUID();
 
           await db
-            .insert(usersTable)
+            .insert(schema.usersTable)
             .values({
               id,
               username,
@@ -177,8 +195,8 @@ export const vaultsPlugin = () => {
             });
 
           await db
-            .delete(joincodeTable)
-            .where(eq(joincodeTable.code, code));
+            .delete(schema.joincodeTable)
+            .where(eq(schema.joincodeTable.code, code));
 
           return {
             id,
@@ -187,13 +205,12 @@ export const vaultsPlugin = () => {
             role: joincode.role,
           }
         },
-        async createJoincode(role: Role, creator: string, expiresAt?: number): Promise<Joincode> {
+        async createJoincode(role: schema.Role, creator: string, expiresAt?: number): Promise<schema.Joincode> {
           const code = generateJoincode();
-          const { db } = ctx.store;
           expiresAt = expiresAt === undefined ? Date.now() + 24 * 60 * 60 * 1000 : expiresAt;
 
           await db
-            .insert(joincodeTable)
+            .insert(schema.joincodeTable)
             .values({
               code,
               role,
@@ -208,11 +225,11 @@ export const vaultsPlugin = () => {
             creator
           };
         },
-        async getJoincode(code: string): Promise<Joincode | null> {
+        async getJoincode(code: string): Promise<schema.Joincode | null> {
           const codes = await db
             .select()
-            .from(joincodeTable)
-            .where(eq(joincodeTable.code, code));
+            .from(schema.joincodeTable)
+            .where(eq(schema.joincodeTable.code, code));
 
           if (codes.length !== 1) {
             return null;
@@ -221,19 +238,53 @@ export const vaultsPlugin = () => {
           return codes[0]!;
         },
         async deleteJoincode(code: string) {
-          const { db } = ctx.store;
-
           await db
-            .delete(joincodeTable)
-            .where(eq(joincodeTable.code, code));
+            .delete(schema.joincodeTable)
+            .where(eq(schema.joincodeTable.code, code));
         },
-        async getAllJoincodes(): Promise<Joincode[]> {
-          const { db } = ctx.store;
-
+        async getAllJoincodes(): Promise<schema.Joincode[]> {
           return await db
             .select()
-            .from(joincodeTable);
-        }
+            .from(schema.joincodeTable);
+        },
+        async createVault(vaultName: string, directory: string): Promise<schema.VaultInfo> {
+          const info: schema.VaultInfo = {
+            name: vaultName,
+            location: directory,
+            createdAt: Date.now(),
+          }
+          await db
+            .insert(schema.vaultsTable)
+            .values(info);
+
+          const vault = await getVaultFromInfo(info);
+          vaults.push(vault);
+
+          return info;
+        },
+        async getPersmissionsFor(vault: string, userId: string): Promise<schema.Access> {
+          const accesses = await db
+            .select()
+            .from(schema.accessTable)
+            .where(and(
+              eq(schema.accessTable.userId, userId),
+              eq(schema.accessTable.vaultName, vault),
+            ))
+
+          if (accesses.length !== 1) {
+            return {
+              vaultName: vault,
+              userId,
+              read: false,
+              write: false,
+            }
+          }
+
+          return accesses[0]!;
+        },
+        async updatePermission(access: Access) {
+
+        },
       }
     })
     .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {
@@ -249,8 +300,8 @@ export const vaultsPlugin = () => {
 
       const token = (await db
         .select()
-        .from(tokensTable)
-        .where(eq(tokensTable.token, ctx.bearer))
+        .from(schema.tokensTable)
+        .where(eq(schema.tokensTable.token, ctx.bearer))
         .limit(1))[0];
 
       if (!token) {
@@ -271,8 +322,8 @@ export const vaultsPlugin = () => {
 
       const user = (await db
         .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, token.userId))
+        .from(schema.usersTable)
+        .where(eq(schema.usersTable.id, token.userId))
         .limit(1))[0];
 
       if (!user) {
