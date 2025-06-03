@@ -1,8 +1,8 @@
-import { getConfigFromPartial, type Config, type PartialConfig } from "./config";
+import { getConfigFromPartial, type Config } from "./config";
 import { app } from "./http";
 import { getDb } from "./db";
 import { uiPlugin } from "./http/ui";
-import { getTreaty } from "./interface";
+import { treaty } from "@elysiajs/eden";
 
 export function startApp(config: Config) {
   const db = getDb(config);
@@ -29,11 +29,15 @@ export function startTestApp() {
     serveUI: false,
   });
 
-  const { app, db } = startApp(config);
+  const db = getDb(config);
+  const api = treaty(app);
+
+  app.store.db = db;
+  app.store.config = config;
 
   return {
     app,
     db,
-    api: getTreaty("http://localhost:8173")
+    api,
   };
 }

@@ -17,13 +17,13 @@ export const app = new Elysia()
       return ctx.status("Unauthorized", "You must be authenticated.");
     }
     const user = ctx.auth.user;
-    
+
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
-    
+
     if (!(await ctx.canAccessVault(user, vaultName))) {
       return ctx.status("Unauthorized", "This user cannot access this vault");
     }
@@ -52,13 +52,13 @@ export const app = new Elysia()
       return ctx.status("Unauthorized", "You must be authenticated.");
     }
     const user = ctx.auth.user;
-    
+
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
-    
+
     if (!(await ctx.canAccessVault(user, vaultName))) {
       return ctx.status("Unauthorized", "This user cannot access this vault");
     }
@@ -235,9 +235,9 @@ export const app = new Elysia()
       return ctx.status("Not Found");
     }
 
-    const canDelete = 
-      (myRole === "Superadmin" && deletingUser.role !== "Superadmin") 
-        || (myRole === "Admin" && deletingUser.role === "User");
+    const canDelete =
+      (myRole === "Superadmin" && deletingUser.role !== "Superadmin")
+      || (myRole === "Admin" && deletingUser.role === "User");
 
 
     if (canDelete) {
@@ -295,9 +295,9 @@ export const app = new Elysia()
       return ctx.status("Unauthorized", "Must be authenticated to access");
     }
     const { user } = ctx.auth;
-    const { role }  = ctx.body;
+    const { role } = ctx.body;
 
-    const isValid = (user.role === "Superadmin" && (role === "Admin" || role === "User")) 
+    const isValid = (user.role === "Superadmin" && (role === "Admin" || role === "User"))
       || (user.role === "Admin" && role === "User");
 
     if (!isValid) {
@@ -313,7 +313,7 @@ export const app = new Elysia()
   })
   .delete("joincodes/:code", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "Must be authenticated to access");
+      return ctx.status("Unauthorized", `Must be authenticated to access, instead ${ctx.auth.type}`);
     }
     const { user } = ctx.auth;
     const joincode = await ctx.getJoincode(ctx.params.code)
@@ -324,6 +324,7 @@ export const app = new Elysia()
     const canDelete = (user.role === "Superadmin") || (user.role === "Admin" && joincode.creator === user.id)
 
     if (canDelete) {
+      await ctx.deleteJoincode(joincode.code);
       return ctx.status("OK");
     }
     return ctx.status("Unauthorized");

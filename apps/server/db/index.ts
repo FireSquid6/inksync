@@ -9,7 +9,7 @@ import { type VaultInfo } from "./schema";
 export type Db = ReturnType<typeof getDb>;
 
 export function getDb(config: Config) {
-  const sqlite = new Database(path.join(config.storeDirectory, "database.sqlite"));
+  const sqlite = new Database(config.databasePath);
   const db = drizzle({ client: sqlite });
   
   const myDirectory = path.resolve(import.meta.dir, "..");

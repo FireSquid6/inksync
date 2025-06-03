@@ -38,266 +38,268 @@ export const vaultsPlugin = () => {
   return new Elysia({
     name: "vaults-plugin",
   })
-  .state("vaults", [] as Vault[])
-  .state("tempfiles", new Map<string, number>)
-  .state("db", {} as Db)
-  .state("config", {} as Config)
-  .use(bearer())
-  .derive({ as: "global" }, (ctx) => {
-    const { db, vaults } = ctx.store
-    return {
-      getVaultByName(name: string): Vault | null {
-        const vault = vaults.find((v) => v.getName() === name);
-        return vault ?? null;
-      },
-      async addVault(vaultInfo: VaultInfo) {
-        await db
-          .insert(vaultsTable)
-          .values(vaultInfo)
+    .state("vaults", [] as Vault[])
+    .state("tempfiles", new Map<string, number>)
+    .state("db", {} as Db)
+    .state("config", {} as Config)
+    .use(bearer())
+    .derive({ as: "global" }, (ctx) => {
+      const { db, vaults } = ctx.store
+      return {
+        getVaultByName(name: string): Vault | null {
+          const vault = vaults.find((v) => v.getName() === name);
+          return vault ?? null;
+        },
+        async addVault(vaultInfo: VaultInfo) {
+          await db
+            .insert(vaultsTable)
+            .values(vaultInfo)
 
-        const vault = await getVaultFromInfo(vaultInfo);
-        vaults.push(vault);
-      },
-      getAllNames(): string[] {
-        return ctx.store.vaults.map((v) => v.getName());
-      },
-      async regenerateVaults() {
-        const vaultInfos = await db
-          .select()
-          .from(vaultsTable)
+          const vault = await getVaultFromInfo(vaultInfo);
+          vaults.push(vault);
+        },
+        getAllNames(): string[] {
+          return ctx.store.vaults.map((v) => v.getName());
+        },
+        async regenerateVaults() {
+          const vaultInfos = await db
+            .select()
+            .from(vaultsTable)
 
-        const newVaults = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i)));
-        ctx.store.vaults = newVaults;
-      },
-      async canAccessVault(user: User, vaultName: string): Promise<boolean> {
-        const { db } = ctx.store;
-        if (user.role === "Superadmin") {
-          return true;
-        }
+          const newVaults = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i)));
+          ctx.store.vaults = newVaults;
+        },
+        async canAccessVault(user: User, vaultName: string): Promise<boolean> {
+          const { db } = ctx.store;
+          if (user.role === "Superadmin") {
+            return true;
+          }
 
-        const access = await db
-          .select()
-          .from(accessTable)
-          .where(and(
-            eq(accessTable.userId, user.id),
-            eq(accessTable.vaultName, vaultName),
-          ))
+          const access = await db
+            .select()
+            .from(accessTable)
+            .where(and(
+              eq(accessTable.userId, user.id),
+              eq(accessTable.vaultName, vaultName),
+            ))
 
-        return access.length === 1;
-      },
-      async getUser(userId: string): Promise<User | null> {
-        const { db } = ctx.store;
+          return access.length === 1;
+        },
+        async getUser(userId: string): Promise<User | null> {
+          const { db } = ctx.store;
 
-        const users = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.id, userId));
+          const users = await db
+            .select()
+            .from(usersTable)
+            .where(eq(usersTable.id, userId));
 
-        if (users.length === 1) {
-          return users[0]!;
-        }
-        return null;
-      },
-      async deleteUser(userId: string) {
-        const { db } = ctx.store;
-
-        await db
-          .delete(usersTable)
-          .where(eq(usersTable.id, userId));
-
-        await db
-          .delete(tokensTable)
-          .where(eq(tokensTable.userId, userId));
-      },
-      async changeUserRole(userId: string, newRole: Role) {
-        await db
-          .update(usersTable)
-          .set({ role: newRole })
-          .where(eq(usersTable.id, userId));
-      },
-      async validateUsernamePassword(username: string, password: string): Promise<string | null> {
-        const users = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.username, username));
-
-        if (users.length !== 1) {
+          if (users.length === 1) {
+            return users[0]!;
+          }
           return null;
-        }
+        },
+        async deleteUser(userId: string) {
+          const { db } = ctx.store;
 
-        const user = users[0]!;
-        const hashed = await hashPassword(password);
+          await db
+            .delete(usersTable)
+            .where(eq(usersTable.id, userId));
 
-        if (user.hashedPassword === hashed) {
-          return user.id;
-        }
-        return null;
-      },
-      async makeNewToken(userId: string): Promise<string> {
-        const token = newRandomToken();
-        const expirationTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
-        const { db } = ctx.store;
+          await db
+            .delete(tokensTable)
+            .where(eq(tokensTable.userId, userId));
+        },
+        async changeUserRole(userId: string, newRole: Role) {
+          await db
+            .update(usersTable)
+            .set({ role: newRole })
+            .where(eq(usersTable.id, userId));
+        },
+        async validateUsernamePassword(username: string, password: string): Promise<string | null> {
+          const users = await db
+            .select()
+            .from(usersTable)
+            .where(eq(usersTable.username, username));
 
-        await db
-          .insert(tokensTable)
-          .values({
-            token,
-            userId,
-            expiresAt: expirationTime,
-          })
+          if (users.length !== 1) {
+            return null;
+          }
 
-        return token;
-      },
-      async deleteToken(userId: string, token: string) {
-        await db
-          .delete(tokensTable)
-          .where(and(
-            eq(tokensTable.userId, userId),
-            eq(tokensTable.token, token),
-          ));
-      },
-      async createUser(username: string, password: string, code: string): Promise<User | null> {
-        const joincodes = await db
-          .select()
-          .from(joincodeTable)
-          .where(eq(joincodeTable.code, code));
-
-        if (joincodes.length !== 1) {
+          const user = users[0]!;
+          if (await verifyPassword(password, user.hashedPassword)) {
+            return user.id;
+          }
           return null;
-        }
-        const joincode = joincodes[0]!;
-        const hashedPassword = await hashPassword(password);
-        const id = randomUUID();
+        },
+        async makeNewToken(userId: string): Promise<string> {
+          const token = newRandomToken();
+          const expirationTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
+          const { db } = ctx.store;
 
-        await db
-          .insert(usersTable)
-          .values({
+          await db
+            .insert(tokensTable)
+            .values({
+              token,
+              userId,
+              expiresAt: expirationTime,
+            })
+
+          return token;
+        },
+        async deleteToken(userId: string, token: string) {
+          await db
+            .delete(tokensTable)
+            .where(and(
+              eq(tokensTable.userId, userId),
+              eq(tokensTable.token, token),
+            ));
+        },
+        async createUser(username: string, password: string, code: string): Promise<User | null> {
+          const joincodes = await db
+            .select()
+            .from(joincodeTable)
+            .where(eq(joincodeTable.code, code));
+
+          if (joincodes.length !== 1) {
+            return null;
+          }
+          const joincode = joincodes[0]!;
+          const hashedPassword = await hashPassword(password);
+          const id = randomUUID();
+
+          await db
+            .insert(usersTable)
+            .values({
+              id,
+              username,
+              hashedPassword,
+              role: joincode.role,
+            });
+
+          await db
+            .delete(joincodeTable)
+            .where(eq(joincodeTable.code, code));
+
+          return {
             id,
             username,
             hashedPassword,
             role: joincode.role,
-          });
+          }
+        },
+        async createJoincode(role: Role, creator: string, expiresAt?: number): Promise<Joincode> {
+          const code = generateJoincode();
+          const { db } = ctx.store;
+          expiresAt = expiresAt === undefined ? Date.now() + 24 * 60 * 60 * 1000 : expiresAt;
 
-        await db
-          .delete(joincodeTable)
-          .where(eq(joincodeTable.code, code));
+          await db
+            .insert(joincodeTable)
+            .values({
+              code,
+              role,
+              expiresAt,
+              creator,
+            });
 
-        return {
-          id,
-          username,
-          hashedPassword,
-          role: joincode.role,
-        }
-      },
-      async createJoincode(role: Role, creator: string, expiresAt?: number): Promise<Joincode> {
-        const code = generateJoincode();
-        const { db } = ctx.store;
-        expiresAt = expiresAt === undefined ? Date.now() + 24 * 60 * 60 * 1000 : expiresAt;
-
-        await db
-          .insert(joincodeTable)
-          .values({
+          return {
             code,
             role,
             expiresAt,
-            creator,
-          });
+            creator
+          };
+        },
+        async getJoincode(code: string): Promise<Joincode | null> {
+          const codes = await db
+            .select()
+            .from(joincodeTable)
+            .where(eq(joincodeTable.code, code));
 
+          if (codes.length !== 1) {
+            return null;
+          }
+
+          return codes[0]!;
+        },
+        async deleteJoincode(code: string) {
+          const { db } = ctx.store;
+
+          await db
+            .delete(joincodeTable)
+            .where(eq(joincodeTable.code, code));
+        },
+        async getAllJoincodes(): Promise<Joincode[]> {
+          const { db } = ctx.store;
+
+          return await db
+            .select()
+            .from(joincodeTable);
+        }
+      }
+    })
+    .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {
+      const { db } = ctx.store;
+
+      if (typeof ctx.bearer !== "string") {
         return {
-          code,
-          role,
-          expiresAt,
-          creator
-        };
-      },
-      async getJoincode(code: string): Promise<Joincode | null> {
-        const codes = await db
-          .select()
-          .from(joincodeTable)
-          .where(eq(joincodeTable.code, code));
-
-        if (codes.length !== 1) {
-          return null;
+          auth: {
+            type: !ctx.bearer ? "no-token" : "bad-token",
+          }
         }
-
-        return codes[0]!;
-      },
-      async deleteJoincode(code: string) {
-        const { db } = ctx.store;
-
-        await db
-          .delete(joincodeTable)
-          .where(eq(joincodeTable.code, code));
-      },
-      async getAllJoincodes(): Promise<Joincode[]> {
-        const { db } = ctx.store;
-
-        return await db
-          .select()
-          .from(joincodeTable);
       }
-    }
-  })
-  .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {
-    const { db } = ctx.store;
 
-    if (typeof ctx.bearer !== "string") {
+      const token = (await db
+        .select()
+        .from(tokensTable)
+        .where(eq(tokensTable.token, ctx.bearer))
+        .limit(1))[0];
+
+      if (!token) {
+        return {
+          auth: {
+            type: "bad-token",
+          }
+        }
+      }
+
+      if (token.expiresAt <= Date.now()) {
+        return {
+          auth: {
+            type: "expired-token",
+          }
+        }
+      }
+
+      const user = (await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, token.userId))
+        .limit(1))[0];
+
+      if (!user) {
+        return {
+          auth: {
+            type: "bad-token",
+          }
+        }
+      }
+
       return {
         auth: {
-          type: !ctx.bearer ? "no-token" : "bad-token",
+          type: "authenticated",
+          user,
+          token: token.token,
         }
       }
-    }
-
-    const token = (await db
-      .select()
-      .from(tokensTable)
-      .where(eq(tokensTable.token, ctx.bearer))
-      .limit(1))[0];
-
-    if (!token) {
-      return {
-        auth: {
-          type: "bad-token",
-        }
-      }
-    }
-
-    if (token.expiresAt <= Date.now()) {
-      return {
-        auth: {
-          type: "expired-token",
-        }
-      }
-    }
-
-    const user = (await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, token.userId))
-      .limit(1))[0];
-
-    if (!user) {
-      return {
-        auth: {
-          type: "bad-token",
-        }
-      }
-    }
-
-    return {
-      auth: {
-        type: "authenticated",
-        user,
-        token: token.token,
-      }
-    }
-  });
+    });
 }
 
 
-async function hashPassword(password: string): Promise<string> {
-  return await Bun.password.hash(password);
+function hashPassword(password: string): Promise<string> {
+  return Bun.password.hash(password);
+}
+
+function verifyPassword(givenPassword: string, hashedPassword: string) {
+  return Bun.password.verify(givenPassword, hashedPassword);
 }
 
 function newRandomToken(): string {
@@ -308,7 +310,7 @@ function newRandomToken(): string {
 
 function generateJoincode(): string {
   const filteredWords = words.filter(word => word.length >= 4 && word.length <= 8);
-  
+
   const selectedWords = [];
   for (let i = 0; i < 4; i++) {
     const randomIndex = Math.floor(Math.random() * filteredWords.length);
