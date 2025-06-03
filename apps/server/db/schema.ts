@@ -2,12 +2,6 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import { text, int } from "drizzle-orm/sqlite-core";
 
-export type PermissionType = 
-  | "READ_USERS"
-  | "WRITE_USERS"
-  | "READ_VAULTS"
-  | "WRITE_VAULTS"
-
 export type VaultType = 
   | "directory"
   | "s3-bucket"
@@ -49,9 +43,3 @@ export const accessTable = sqliteTable("access", {
 });
 export type Access = InferSelectModel<typeof accessTable>;
 
-export const permissionTable = sqliteTable("permissions", {
-  userId: text().notNull().references(() => usersTable.id),
-  permission: text().notNull().$type<PermissionType>(),
-});
-
-export type Permission = InferSelectModel<typeof permissionTable>;
