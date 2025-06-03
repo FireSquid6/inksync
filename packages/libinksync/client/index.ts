@@ -2,7 +2,7 @@ import type { Store, Update } from "../store";
 import path from "path";
 import { DELETED_HASH, IGNOREFILE_NAME, INKSYNC_DIRECTORY_NAME, MAX_FILE_SIZE } from "../constants";
 import { type SyncResult } from "./results";
-import { hashBlob, type SuccessfulUpdate } from "../server";
+import { hashBlob, type SuccessfulUpdate } from "../vault";
 import type { Filesystem } from "../filesystem";
 import { silentLogger, type Logger } from "../logger";
 import { isIgnored } from "./ignorelist";

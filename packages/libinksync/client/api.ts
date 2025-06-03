@@ -1,6 +1,6 @@
 // functions in Api should always return an error rather than failing
 
-import type { SuccessfulUpdate, Vault } from "../server";
+import type { SuccessfulUpdate, Vault } from "../vault";
 import type { Update } from "../store";
 
 // only returns the happy path!

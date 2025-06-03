@@ -1,8 +1,8 @@
 import { test, expect } from "bun:test";
 import { testdir } from "./setup.test";
-import { type FailedUpdate, type SuccessfulUpdate } from "../server";
+import { type FailedUpdate, type SuccessfulUpdate } from "../vault";
 import path from "path";
-import { vaultFromDirectory } from "libinksync/server";
+import { vaultFromDirectory } from "libinksync/vault";
 
 
 test("pushing updates", async () => {

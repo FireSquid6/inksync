@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { Vault, vaultFromDirectory } from "libinksync/server";
-import { startAppWithVaults } from "server/http";
+import { Vault, vaultFromDirectory } from "libinksync/vault";
 
 
 export const baseVaultSchema = z.object({
@@ -27,6 +26,6 @@ export async function startServer(config: ServerConfig) {
       //...
     }
   }));
+  console.log("Need to fix");
 
-  await startAppWithVaults(vaults, port);
 }

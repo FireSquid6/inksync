@@ -2,10 +2,6 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import { text, int } from "drizzle-orm/sqlite-core";
 
-export type VaultType = 
-  | "directory"
-  | "s3-bucket"
-
 export type Role = 
   | "User"
   | "Admin"
@@ -20,13 +16,11 @@ export const usersTable = sqliteTable("users_table", {
 export type User = InferSelectModel<typeof usersTable>;
 export type InsertUser = InferInsertModel<typeof usersTable>;
 
-// TODO - handle AWS vaults
 // TODO - handle encrypted vaults
 export const vaultsTable = sqliteTable("vaults", {
   name: text().unique().primaryKey(),
-  type: text().notNull().$type<VaultType>(),
-  address: text(),
   location: text().notNull(),
+  createdAt: int().notNull(),
 });
 
 export type VaultInfo = InferSelectModel<typeof vaultsTable>;

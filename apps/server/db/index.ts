@@ -3,7 +3,7 @@ import path from "path";
 import type { Config } from "../config";
 import { Database } from "bun:sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { Vault, vaultFromDirectory } from "libinksync/server";
+import { Vault, vaultFromDirectory } from "libinksync/vault";
 import { type VaultInfo } from "./schema";
 
 export type Db = ReturnType<typeof getDb>;

@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { Vault } from "libinksync/server";
+import { Vault } from "libinksync/vault";
 import { getVaultFromInfo, type Db } from "../db";
 import { accessTable, joincodeTable, tokensTable, usersTable, vaultsTable, type Role, type User, type VaultInfo, type Joincode } from "../db/schema";
 import bearer from "@elysiajs/bearer";

@@ -1,6 +1,6 @@
 import type { App } from "./http";
 import { treaty } from "@elysiajs/eden";
-import type { SuccessfulUpdate } from "libinksync/server";
+import type { SuccessfulUpdate } from "libinksync/vault";
 import type { Update } from "libinksync/store";
 import type { VaultApi } from "libinksync/client/api"
 

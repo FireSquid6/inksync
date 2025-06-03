@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs";
-
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
 export interface Filesystem {
   readFrom(filepath: string): Promise<Blob>;
   writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void>;
@@ -17,6 +17,52 @@ export interface Filesystem {
   // downloadFile(url: string, filepath: string): Promise<string>;
 }
 
+// all reads and writes are encrypted
+// this should ONLY be used on the client. Server should just read from a directory
+//
+// Does NOT encrypt filepath names. Just their contents.
+//
+// This encrypts the files on the server, NOT the client. 
+// TODO!
+export class EncryptedFilesystem implements Filesystem {
+  private key: string;
+  private fs: DirectoryFilesystem;
+
+  constructor(root: string, key: string) {
+    this.key = key;
+    this.fs = new DirectoryFilesystem(root);
+  }
+
+  // encrypt for reads to be sent to the server
+  async readFrom(filepath: string): Promise<Blob> {
+
+  }
+  // decrupt for writes to be put on the user's drive
+  async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
+
+  }
+  async remove(filepath: string): Promise<void> {
+
+  }
+  exists(filepath: string): Promise<boolean> {
+    return this.fs.exists(filepath);
+  }
+  sizeOf(filepath: string): Promise<number> {
+    return this.fs.sizeOf(filepath);
+  }
+  listdir(filepath: string, recursive?: boolean): Promise<string[]> {
+    return this.fs.listdir(filepath, recursive);
+  }
+  isDir(filepath: string): Promise<boolean> {
+    return this.fs.isDir(filepath)
+  }
+  copyTo(src: string, dest: string): Promise<void> {
+    return this.fs.copyTo(src, dest);
+  }
+  mkdir(dirpath: string): Promise<void> {
+    return this.fs.mkdir(dirpath);
+  }
+}
 
 export class DirectoryFilesystem implements Filesystem {
   private root: string;
@@ -38,7 +84,7 @@ export class DirectoryFilesystem implements Filesystem {
   async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
     const fp = path.join(this.root, filepath);
     const dir = path.dirname(fp);
-    
+
     fs.mkdirSync(dir, { recursive: true });
 
     if (data instanceof ArrayBuffer) {
@@ -88,7 +134,9 @@ export class DirectoryFilesystem implements Filesystem {
   async copyTo(src: string, dest: string): Promise<void> {
     const srcFp = path.join(this.root, src);
     const destFp = path.join(this.root, dest);
-    
+
     fs.cpSync(srcFp, destFp);
   }
 }
+
+
