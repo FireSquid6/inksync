@@ -169,7 +169,24 @@ export const app = new Elysia()
 
   })
   .post("/users", async (ctx) => {
+    const { joincode, username, password } = ctx.body;
 
+    if (username.length <= 4 || username.length >= 24) {
+      return ctx.status(400, "Username must be between 4 and 24 characters");
+    }
+
+    if (!isValidPassword(password)) {
+      return ctx.status(400, "Password invalid. Must contain captial, lowercase, special, and number. Must be between 12 and 32 characters");
+    }
+
+    await waitForRandomAmount();
+    const user = await ctx.createUser(username, password, joincode);
+
+    if (user === null) {
+      return ctx.status(400, "Joincode was invalid");
+    }
+
+    return ctx.status("OK", user);
   }, {
     body: t.Object({
       joincode: t.String(),
@@ -271,6 +288,56 @@ export const app = new Elysia()
 
     return ctx.status("OK");
   })
+  .post("/joincodes", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "Must be authenticated to access");
+    }
+    const { user } = ctx.auth;
+    const { role }  = ctx.body;
+
+    const isValid = (user.role === "Superadmin" && (role === "Admin" || role === "User")) 
+      || (user.role === "Admin" && role === "User");
+
+    if (!isValid) {
+      return ctx.status(400, "You do not have permission to create a joincode for that role");
+    }
+
+    const joincode = await ctx.createJoincode(role, user.id)
+    return joincode;
+  }, {
+    body: t.Object({
+      role: t.String(),
+    })
+  })
+  .delete("joincodes/:code", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "Must be authenticated to access");
+    }
+    const { user } = ctx.auth;
+    const joincode = await ctx.getJoincode(ctx.params.code)
+    if (joincode === null) {
+      return ctx.status("Not Found");
+    }
+
+    const canDelete = (user.role === "Superadmin") || (user.role === "Admin" && joincode.creator === user.id)
+
+    if (canDelete) {
+      return ctx.status("OK");
+    }
+    return ctx.status("Unauthorized");
+  })
+  .get("/joincodes", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "Must be authenticated to access");
+    }
+    const { user } = ctx.auth;
+    if (!(user.role === "Admin" || user.role === "Superadmin")) {
+      return ctx.status("Unauthorized");
+    }
+
+    const joincodes = await ctx.getAllJoincodes();
+    return ctx.status("OK", joincodes);
+  })
 
 export type App = typeof app;
 
@@ -292,6 +359,19 @@ function fileToReadable(file: File): Readable {
       }
     }
   });
+}
+
+function isValidPassword(password: string): boolean {
+  if (password.length < 12 || password.length > 32) {
+    return false;
+  }
+
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  return hasUppercase && hasLowercase && hasNumber && hasSpecial;
 }
 
 // waits for somewhere between 0s and 1.5s

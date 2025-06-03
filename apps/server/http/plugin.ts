@@ -1,10 +1,12 @@
 import { Elysia } from "elysia";
 import { Vault } from "libinksync/server";
 import { getVaultFromInfo, type Db } from "../db";
-import { accessTable, tokensTable, usersTable, vaultsTable, type Role, type User, type VaultInfo } from "../db/schema";
+import { accessTable, joincodeTable, tokensTable, usersTable, vaultsTable, type Role, type User, type VaultInfo, type Joincode } from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";
 import type { Config } from "../config";
+import { randomUUID } from "crypto";
+import words from "an-array-of-english-words";
 
 
 export type AuthStatus =
@@ -153,6 +155,86 @@ export const vaultsPlugin = () => {
             eq(tokensTable.userId, userId),
             eq(tokensTable.token, token),
           ));
+      },
+      async createUser(username: string, password: string, code: string): Promise<User | null> {
+        const joincodes = await db
+          .select()
+          .from(joincodeTable)
+          .where(eq(joincodeTable.code, code));
+
+        if (joincodes.length !== 1) {
+          return null;
+        }
+        const joincode = joincodes[0]!;
+        const hashedPassword = await hashPassword(password);
+        const id = randomUUID();
+
+        await db
+          .insert(usersTable)
+          .values({
+            id,
+            username,
+            hashedPassword,
+            role: joincode.role,
+          });
+
+        await db
+          .delete(joincodeTable)
+          .where(eq(joincodeTable.code, code));
+
+        return {
+          id,
+          username,
+          hashedPassword,
+          role: joincode.role,
+        }
+      },
+      async createJoincode(role: Role, creator: string, expiresAt?: number): Promise<Joincode> {
+        const code = generateJoincode();
+        const { db } = ctx.store;
+        expiresAt = expiresAt === undefined ? Date.now() + 24 * 60 * 60 * 1000 : expiresAt;
+
+        await db
+          .insert(joincodeTable)
+          .values({
+            code,
+            role,
+            expiresAt,
+            creator,
+          });
+
+        return {
+          code,
+          role,
+          expiresAt,
+          creator
+        };
+      },
+      async getJoincode(code: string): Promise<Joincode | null> {
+        const codes = await db
+          .select()
+          .from(joincodeTable)
+          .where(eq(joincodeTable.code, code));
+
+        if (codes.length !== 1) {
+          return null;
+        }
+
+        return codes[0]!;
+      },
+      async deleteJoincode(code: string) {
+        const { db } = ctx.store;
+
+        await db
+          .delete(joincodeTable)
+          .where(eq(joincodeTable.code, code));
+      },
+      async getAllJoincodes(): Promise<Joincode[]> {
+        const { db } = ctx.store;
+
+        return await db
+          .select()
+          .from(joincodeTable);
       }
     }
   })
@@ -222,4 +304,16 @@ function newRandomToken(): string {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function generateJoincode(): string {
+  const filteredWords = words.filter(word => word.length >= 4 && word.length <= 8);
+  
+  const selectedWords = [];
+  for (let i = 0; i < 4; i++) {
+    const randomIndex = Math.floor(Math.random() * filteredWords.length);
+    selectedWords.push(filteredWords[randomIndex]);
+  }
+
+  return selectedWords.join("-");
 }

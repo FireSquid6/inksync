@@ -52,5 +52,7 @@ export type Access = InferSelectModel<typeof accessTable>;
 export const joincodeTable = sqliteTable("joincodes", {
   code: text().notNull(),
   role: text().notNull().$type<Role>(),
+  expiresAt: int().notNull(),
+  creator: text().notNull().references(() => usersTable.id),
 });
 export type Joincode = InferSelectModel<typeof joincodeTable>;
