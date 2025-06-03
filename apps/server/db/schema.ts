@@ -13,7 +13,7 @@ export type Role =
 
 export const usersTable = sqliteTable("users_table", {
   id: text().notNull().unique().primaryKey(),
-  username: text().notNull(),
+  username: text().notNull().unique(),
   hashedPassword: text().notNull(),
   role: text().notNull().$type<Role>(),
 });

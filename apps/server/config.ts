@@ -3,7 +3,6 @@ import fs from "fs";
 import YAML from "yaml";
 
 export const configSchema = z.object({
-  doAuthentication: z.optional(z.boolean()),
   port: z.optional(z.number()),
   storeDirectory: z.optional(z.string()),
   databasePath: z.optional(z.string()),
@@ -28,7 +27,6 @@ export function getConfigFromFile(filepath?: string): Config {
 
 export function getConfigFromPartial(partialConfig: PartialConfig): Config {
   return {
-    doAuthentication: partialConfig.doAuthentication ?? true,
     port: partialConfig.port ?? 3120,
     storeDirectory: partialConfig.storeDirectory ?? "./store",
     databasePath: partialConfig.databasePath ?? ":memory:",

@@ -33,7 +33,7 @@ export const app = new Elysia()
 
     const result = await vault.pushUpdate(file, fp, currentHash);
     if (result.type === "success") {
-      return ctx.status("OK", result);
+      return result;
     }
 
     return ctx.status(400, `Failed to upload: ${result.reason}`);
@@ -96,7 +96,7 @@ export const app = new Elysia()
     }
 
     const updates = vault.getUpdatesSince(timestamp);
-    return ctx.status("OK", updates);
+    return updates;
   }, {
     query: t.Optional(t.Object({
       since: t.Number(),
@@ -123,7 +123,7 @@ export const app = new Elysia()
     const fp = decodeFilepath(filepath);
 
     const result = vault.getUpdateFor(fp);
-    return ctx.status("OK", result ?? "UNTRACKED");
+    return result ?? "UNTRACKED";
   }, {
     params: t.Object({
       vault: t.String(),
@@ -186,7 +186,7 @@ export const app = new Elysia()
       return ctx.status(400, "Joincode was invalid");
     }
 
-    return ctx.status("OK", user);
+    return user;
   }, {
     body: t.Object({
       joincode: t.String(),
@@ -242,7 +242,9 @@ export const app = new Elysia()
 
     if (canDelete) {
       await ctx.deleteUser(deletingUser.id);
-      return ctx.status("OK");
+
+      ctx.set.status = 200;
+      return;
     }
 
     return ctx.status("Unauthorized");
@@ -270,7 +272,7 @@ export const app = new Elysia()
     }
     const token = await ctx.makeNewToken(userId);
 
-    return ctx.status("OK", token);
+    return token;
   }, {
     body: t.Object({
       username: t.String(),
@@ -336,7 +338,7 @@ export const app = new Elysia()
     }
 
     const joincodes = await ctx.getAllJoincodes();
-    return ctx.status("OK", joincodes);
+    return joincodes;
   })
 
 export type App = typeof app;
