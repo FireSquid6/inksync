@@ -83,11 +83,6 @@ function RouteComponent() {
     vault.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDetailsClick = (vault: VaultDisplay) => {
-    console.log('Show details for vault:', vault);
-    // In real app, this would navigate to vault details page
-  };
-
   const getTypeIcon = (type: string) => {
     return type === 'directory' ? <Folder className="w-4 h-4" /> : <Cloud className="w-4 h-4" />;
   };
@@ -122,18 +117,17 @@ function RouteComponent() {
         {/* Search and Filter */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="form-control flex-1">
-            <div className="input-group">
+            <label className="input">
               <span className="bg-base-200">
                 <Search className="w-4 h-4" />
               </span>
               <input
                 type="text"
                 placeholder="Search vaults..."
-                className="input input-bordered flex-1"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
+            </label>
           </div>
         </div>
 

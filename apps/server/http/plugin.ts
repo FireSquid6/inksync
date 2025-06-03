@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { Vault } from "libinksync/server";
 import { getVaultFromInfo, type Db } from "../db";
-import { accessTable, tokensTable, usersTable, vaultsTable, type User, type VaultInfo } from "../db/schema";
+import { accessTable, tokensTable, usersTable, vaultsTable, type Role, type User, type VaultInfo } from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";
 import type { Config } from "../config";
@@ -69,7 +69,7 @@ export const vaultsPlugin = () => {
       },
       async canAccessVault(user: User, vaultName: string): Promise<boolean> {
         const { db } = ctx.store;
-        if (user.isAdmin) {
+        if (user.role === "Superadmin") {
           return true;
         }
 
@@ -82,6 +82,57 @@ export const vaultsPlugin = () => {
           ))
 
         return access.length === 1;
+      },
+      async getUser(userId: string): Promise<User | null> {
+        const { db } = ctx.store;
+
+        const users = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, userId));
+
+        if (users.length === 1) {
+          return users[0]!;
+        }
+        return null;
+      },
+      async deleteUser(userId: string) {
+        const { db } = ctx.store;
+
+        await db
+          .delete(usersTable)
+          .where(eq(usersTable.id, userId));
+
+        await db
+          .delete(tokensTable)
+          .where(eq(tokensTable.userId, userId));
+      },
+      async changeUserRole(userId: string, newRole: Role) {
+        await db
+          .update(usersTable)
+          .set({ role: newRole })
+          .where(eq(usersTable.id, userId));
+      },
+      async validateUsernamePassword(username: string, password: string): Promise<string | null> {
+        const users = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.username, username));
+
+        if (users.length !== 1) {
+          return null;
+        }
+
+        const user = users[0]!;
+        const hashed = await hashPassword(password);
+
+        if (user.hashedPassword === hashed) {
+          return user.id;
+        }
+        return null;
+      },
+      async makeNewToken(userId: string): Promise<string> {
+
       },
     }
   })
@@ -142,3 +193,11 @@ export const vaultsPlugin = () => {
   });
 }
 
+
+async function hashPassword(password: string): Promise<string> {
+  return await Bun.password.hash(password);
+}
+
+async function newRandomToken() {
+
+}

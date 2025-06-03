@@ -6,11 +6,16 @@ export type VaultType =
   | "directory"
   | "s3-bucket"
 
+export type Role = 
+  | "User"
+  | "Admin"
+  | "Superadmin"
+
 export const usersTable = sqliteTable("users_table", {
   id: text().notNull().unique().primaryKey(),
   username: text().notNull(),
   hashedPassword: text().notNull(),
-  isAdmin: int({ mode: "boolean" }).notNull().default(false),
+  role: text().notNull().$type<Role>(),
 });
 export type User = InferSelectModel<typeof usersTable>;
 export type InsertUser = InferInsertModel<typeof usersTable>;
@@ -43,3 +48,9 @@ export const accessTable = sqliteTable("access", {
 });
 export type Access = InferSelectModel<typeof accessTable>;
 
+
+export const joincodeTable = sqliteTable("joincodes", {
+  code: text().notNull(),
+  role: text().notNull().$type<Role>(),
+});
+export type Joincode = InferSelectModel<typeof joincodeTable>;

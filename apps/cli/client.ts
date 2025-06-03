@@ -8,7 +8,6 @@ import type { SyncResult } from "libinksync/client/results";
 import { consoleLogger } from "libinksync/logger";
 import { getApiFromAddress } from "server/interface";
 
-
 export function getClient(directory: string): VaultClient | null {
   const logger = consoleLogger();
   const connectfilePath = path.join(directory, INKSYNC_DIRECTORY_NAME, CLIENT_CONNECTFILE);

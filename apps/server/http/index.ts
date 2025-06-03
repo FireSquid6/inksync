@@ -33,7 +33,7 @@ export const app = new Elysia()
 
     const result = await vault.pushUpdate(file, fp, currentHash);
     if (result.type === "success") {
-      return result;
+      return ctx.status("OK", result);
     }
 
     return ctx.status(400, `Failed to upload: ${result.reason}`);
@@ -70,7 +70,7 @@ export const app = new Elysia()
       return result;
     }
 
-    return await result.arrayBuffer();
+    return ctx.status("OK", await result.arrayBuffer());
   }, {
     params: t.Object({
       vault: t.String(),
@@ -96,7 +96,7 @@ export const app = new Elysia()
     }
 
     const updates = vault.getUpdatesSince(timestamp);
-    return updates;
+    return ctx.status("OK", updates);
   }, {
     query: t.Optional(t.Object({
       since: t.Number(),
@@ -123,7 +123,7 @@ export const app = new Elysia()
     const fp = decodeFilepath(filepath);
 
     const result = vault.getUpdateFor(fp);
-    return result ?? "UNTRACKED";
+    return ctx.status("OK", result ?? "UNTRACKED");
   }, {
     params: t.Object({
       vault: t.String(),
@@ -168,6 +168,100 @@ export const app = new Elysia()
   .ws("/stream", () => {
 
   })
+  .post("/users", async (ctx) => {
+
+  }, {
+    body: t.Object({
+      joincode: t.String(),
+      username: t.String(),
+      password: t.String(),
+    }),
+  })
+  .patch("/users/:id", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized");
+    }
+
+    if (ctx.auth.user.role !== "Superadmin") {
+      return ctx.status("Unauthorized", "Must be a superadmin to modify user roles");
+    }
+    const otherUser = await ctx.getUser(ctx.params.id);
+
+    if (otherUser === null) {
+      return ctx.status("Not Found");
+    }
+
+    switch (ctx.body.role) {
+      case "Admin":
+        await ctx.changeUserRole(otherUser.id, "Admin");
+        break;
+      case "User":
+        await ctx.changeUserRole(otherUser.id, "User");
+        break;
+      default:
+        return ctx.status(400, `${ctx.body.role} is not a role you can promote to`)
+    }
+  }, {
+    body: t.Object({
+      role: t.String(),
+    })
+  })
+  .delete("/users/:id", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized");
+    }
+
+    const deletingUser = await ctx.getUser(ctx.params.id);
+    const myRole = ctx.auth.user.role;
+
+    if (deletingUser === null) {
+      return ctx.status("Not Found");
+    }
+
+    const canDelete = 
+      (myRole === "Superadmin" && deletingUser.role !== "Superadmin") 
+        || (myRole === "Admin" && deletingUser.role === "User");
+
+
+    if (canDelete) {
+      await ctx.deleteUser(deletingUser.id);
+      return ctx.status("OK");
+    }
+
+    return ctx.status("Unauthorized");
+  })
+  .get("/users/:id", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "Must be authenticated to access");
+    }
+
+    const user = ctx.getUser(ctx.params.id);
+    if (user === null) {
+      return ctx.status("Not Found", `User ${ctx.params.id} not found`);
+    }
+
+    return ctx.status("OK", user);
+  })
+  .post("/tokens", async (ctx) => {
+    await waitForRandomAmount();
+    const { username, password } = ctx.body;
+
+    const userId = await ctx.validateUsernamePassword(username, password);
+
+    if (userId == null) {
+      return ctx.status("Unauthorized");
+    }
+
+
+  }, {
+    body: t.Object({
+      username: t.String(),
+      password: t.String(),
+    })
+  })
+  .delete("/tokens/:id", async () => {
+
+  })
 
 export type App = typeof app;
 
@@ -189,4 +283,13 @@ function fileToReadable(file: File): Readable {
       }
     }
   });
+}
+
+// waits for somewhere between 0s and 1.5s
+// this is for authentication functions --- prevents an
+// attacker from figuring out if something e
+async function waitForRandomAmount() {
+  const t = Math.random() * 1.5;
+
+  await new Promise((resolve) => setTimeout(resolve, t))
 }
