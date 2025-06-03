@@ -8,6 +8,7 @@ export function startApp(config: Config) {
   const db = getDb(config);
   app.store.db = db;
   app.store.config = config;
+  app.store.vaults = [];
 
   if (config.serveUI) {
     app.use(uiPlugin());
@@ -32,6 +33,7 @@ export function startTestApp() {
   const db = getDb(config);
   const api = treaty(app);
 
+  app.store.vaults = [];
   app.store.db = db;
   app.store.config = config;
 

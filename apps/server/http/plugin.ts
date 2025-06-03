@@ -45,7 +45,7 @@ export const vaultsPlugin = () => {
     .state("config", {} as Config)
     .use(bearer())
     .derive({ as: "global" }, (ctx) => {
-      const { db, vaults, config } = ctx.store
+      const { db, vaults } = ctx.store
       return {
         getVaultByName(name: string): Vault | null {
           const vault = vaults.find((v) => v.getName() === name);
