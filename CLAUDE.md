@@ -1,5 +1,6 @@
 # CLAUDE.md
 
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -14,6 +15,10 @@ This is a Bun-based monorepo with three main applications:
 - **`apps/mobile`** - React/Vite Capacitor mobile app with TanStack Router
 - **`packages/libinksync`** - Shared TypeScript library used across all apps
 - **`packages/admin-ui`** - React admin interface for server management
+
+## Style Guides
+- Prefer "" to ''
+- If lines go past 120 characters, consider splitting it into multiple lines
 
 ## Development Commands
 

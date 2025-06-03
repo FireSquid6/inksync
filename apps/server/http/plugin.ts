@@ -132,8 +132,28 @@ export const vaultsPlugin = () => {
         return null;
       },
       async makeNewToken(userId: string): Promise<string> {
+        const token = newRandomToken();
+        const expirationTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        const { db } = ctx.store;
 
+        await db
+          .insert(tokensTable)
+          .values({
+            token,
+            userId,
+            expiresAt: expirationTime,
+          })
+
+        return token;
       },
+      async deleteToken(userId: string, token: string) {
+        await db
+          .delete(tokensTable)
+          .where(and(
+            eq(tokensTable.userId, userId),
+            eq(tokensTable.token, token),
+          ));
+      }
     }
   })
   .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {
@@ -198,6 +218,8 @@ async function hashPassword(password: string): Promise<string> {
   return await Bun.password.hash(password);
 }
 
-async function newRandomToken() {
-
+function newRandomToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }

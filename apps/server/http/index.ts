@@ -251,16 +251,25 @@ export const app = new Elysia()
     if (userId == null) {
       return ctx.status("Unauthorized");
     }
+    const token = await ctx.makeNewToken(userId);
 
-
+    return ctx.status("OK", token);
   }, {
     body: t.Object({
       username: t.String(),
       password: t.String(),
     })
   })
-  .delete("/tokens/:id", async () => {
+  .delete("/tokens/:token", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "Must be authenticated to access");
+    }
+    const { user } = ctx.auth;
+    const { token } = ctx.params;
 
+    await ctx.deleteToken(user.id, token);
+
+    return ctx.status("OK");
   })
 
 export type App = typeof app;
