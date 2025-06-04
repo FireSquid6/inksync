@@ -166,7 +166,7 @@ export const vaultsPlugin = () => {
           }
           return null;
         },
-        async makeNewToken(userId: string): Promise<string> {
+        async makeNewToken(userId: string): Promise<{ token: string, expirationTime: number }> {
           const token = newRandomToken();
           const expirationTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
 
@@ -178,7 +178,7 @@ export const vaultsPlugin = () => {
               expiresAt: expirationTime,
             })
 
-          return token;
+          return { token, expirationTime };
         },
         async deleteToken(userId: string, token: string) {
           await db
@@ -328,7 +328,12 @@ export const vaultsPlugin = () => {
             .select()
             .from(schema.accessTable)
             .where(eq(schema.accessTable.vaultName, vaultName))
-        }
+        },
+        async getAllVisibleVaults(user: schema.User) {
+          const vaults = await db
+            .select()
+            .from(schema.vaultsTable);
+        },
       }
     })
     .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {

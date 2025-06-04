@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';
-import { Folder, Cloud, Plus, Search, Pencil } from 'lucide-react';
-import type { VaultDisplay } from '@/lib/treaty';
+import { Plus, Search, Pencil } from 'lucide-react';
+import { makeTreaty, type VaultDisplay } from '@/lib/treaty';
 import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
+import useSWR  from "swr";
 
 export const Route = createFileRoute('/vaults')({
   component: RouteComponent,
@@ -12,42 +13,36 @@ export const Route = createFileRoute('/vaults')({
 const vaults: VaultDisplay[] = [
   {
     name: 'Project Alpha Documents',
-    type: 'directory',
     location: '/var/storage/project-alpha',
     created: new Date('2024-01-15'),
     size: 2469606195 // ~2.3 GB
   },
   {
     name: 'Marketing Assets',
-    type: 's3',
     location: 's3://company-marketing-bucket/assets',
     created: new Date('2024-02-03'),
     size: 897581056 // ~856 MB
   },
   {
     name: 'Customer Data Archive',
-    type: 's3',
     location: 's3://customer-archive/data',
     created: new Date('2024-01-08'),
     size: 13316337664 // ~12.4 GB
   },
   {
     name: 'Development Resources',
-    type: 'directory',
     location: '/opt/dev-resources',
     created: new Date('2024-03-12'),
     size: 5050331136 // ~4.7 GB
   },
   {
     name: 'Legal Documents',
-    type: 'directory',
     location: '/secure/legal-docs',
     created: new Date('2024-01-20'),
     size: 152043520 // ~145 MB
   },
   {
     name: 'Backup Storage',
-    type: 's3',
     location: 's3://company-backups/primary',
     created: new Date('2024-02-28'),
     size: 31043616768 // ~28.9 GB
@@ -56,6 +51,10 @@ const vaults: VaultDisplay[] = [
 
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
+  const { data: vaults, error: vaultsError, vaultsLoading } = useSWR("/vaults", async () => {
+    const treaty = makeTreaty();
+    return treaty.vaults
+  })
 
   // Helper function to format bytes
   const formatBytes = (bytes: number) => {
@@ -82,20 +81,6 @@ function RouteComponent() {
     vault.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vault.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const getTypeIcon = (type: string) => {
-    return type === 'directory' ? <Folder className="w-4 h-4" /> : <Cloud className="w-4 h-4" />;
-  };
-
-  const getTypeBadge = (type: string) => {
-    const badgeClass = type === 'directory' ? 'badge-primary' : 'badge-secondary';
-    return (
-      <span className={`badge ${badgeClass} gap-1`}>
-        {getTypeIcon(type)}
-        {type === 'directory' ? 'Directory' : 'S3'}
-      </span>
-    );
-  };
 
   return (
     <SidebarLayout>
@@ -131,27 +116,6 @@ function RouteComponent() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="stat bg-base-100 rounded-lg shadow">
-            <div className="stat-title">Total Vaults</div>
-            <div className="stat-value text-primary">{vaults.length}</div>
-          </div>
-          <div className="stat bg-base-100 rounded-lg shadow">
-            <div className="stat-title">Directory Vaults</div>
-            <div className="stat-value text-secondary">
-              {vaults.filter(v => v.type === 'directory').length}
-            </div>
-          </div>
-          <div className="stat bg-base-100 rounded-lg shadow">
-            <div className="stat-title">S3 Vaults</div>
-            <div className="stat-value text-accent">
-              {vaults.filter(v => v.type === 's3').length}
-            </div>
-          </div>
-        </div>
-
-        {/* Vaults Table */}
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body p-0">
             <div className="overflow-x-auto">
@@ -159,7 +123,6 @@ function RouteComponent() {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Type</th>
                     <th>Location</th>
                     <th>Created</th>
                     <th>Size</th>
@@ -180,9 +143,6 @@ function RouteComponent() {
                       <tr key={vault.name} className="hover">
                         <td>
                           <div className="font-medium">{vault.name}</div>
-                        </td>
-                        <td>
-                          {getTypeBadge(vault.type)}
                         </td>
                         <td>
                           <div className="font-mono text-sm bg-base-200 px-2 py-1 rounded max-w-xs truncate" title={vault.location}>

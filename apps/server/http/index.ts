@@ -5,6 +5,7 @@ import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
 import type { Access } from "../db/schema";
+import { makeCookie } from "./cookie";
 
 export const app = new Elysia()
   .use(loggerPlugin)
@@ -67,6 +68,9 @@ export const app = new Elysia()
       vaultName: t.String(),
       directory: t.String(),
     })
+  })
+  .get("/vaults", async (ctx) => {
+
   })
   .get("/vaults/:vault", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
@@ -360,7 +364,16 @@ export const app = new Elysia()
     if (userId == null) {
       return ctx.status("Unauthorized");
     }
-    const token = await ctx.makeNewToken(userId);
+    const { token, expirationTime } = await ctx.makeNewToken(userId);
+    const url = new URL(ctx.request.url);
+
+    const cookie = makeCookie({
+      domain: url.hostname,
+      data: token,
+      expires: expirationTime,
+      name: "token",
+    })
+    ctx.set.headers["set-cookie"] = cookie;
 
     return token;
   }, {
@@ -377,6 +390,15 @@ export const app = new Elysia()
     const { token } = ctx.params;
 
     await ctx.deleteToken(user.id, token);
+
+    const url = new URL(ctx.request.url);
+    const cookie = makeCookie({
+      domain: url.hostname,
+      data: "",
+      expires: Date.now(),
+      name: "token",
+    });
+    ctx.set.headers["set-cookie"] = cookie;
 
     return ctx.status("OK");
   })
