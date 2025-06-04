@@ -15,6 +15,7 @@ export const usersTable = sqliteTable("users_table", {
 });
 export type User = InferSelectModel<typeof usersTable>;
 export type InsertUser = InferInsertModel<typeof usersTable>;
+export type PublicUser = Omit<User, "hashedPassword">;
 
 // TODO - handle encrypted vaults
 export const vaultsTable = sqliteTable("vaults", {
@@ -25,6 +26,7 @@ export const vaultsTable = sqliteTable("vaults", {
 });
 
 export type VaultInfo = InferSelectModel<typeof vaultsTable>;
+export type VaultInfoWithSize = VaultInfo & { size: number };
 
 export const tokensTable = sqliteTable("tokens", {
   token: text().notNull().unique().primaryKey(),

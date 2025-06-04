@@ -397,7 +397,11 @@ export const app = new Elysia()
     })
     ctx.set.headers["set-cookie"] = cookie;
 
-    return token;
+    return {
+      token,
+      userId,
+      expiresAt: expirationTime,
+    }
   }, {
     body: t.Object({
       username: t.String(),

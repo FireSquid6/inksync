@@ -1,77 +1,69 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';
 import { Plus, Search, Pencil } from 'lucide-react';
-import { makeTreaty, type VaultDisplay } from '@/lib/treaty';
 import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
-import useSWR  from "swr";
+import { useVaults } from '@/lib/state';
+import type { VaultInfoWithSize } from 'server/db/schema';
 
 export const Route = createFileRoute('/vaults')({
+  loader: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return { vaults: exampleVaults };
+
+  },
   component: RouteComponent,
 })
 
-const vaults: VaultDisplay[] = [
+const exampleVaults: VaultInfoWithSize[] = [
   {
     name: 'Project Alpha Documents',
     location: '/var/storage/project-alpha',
-    created: new Date('2024-01-15'),
+    createdAt: new Date('2024-01-15').getUTCMilliseconds(),
+    creator: "",
     size: 2469606195 // ~2.3 GB
   },
   {
     name: 'Marketing Assets',
     location: 's3://company-marketing-bucket/assets',
-    created: new Date('2024-02-03'),
+    createdAt: new Date('2024-02-03').getUTCMilliseconds(),
+    creator: "",
     size: 897581056 // ~856 MB
   },
   {
     name: 'Customer Data Archive',
     location: 's3://customer-archive/data',
-    created: new Date('2024-01-08'),
+    createdAt: new Date('2024-01-08').getUTCMilliseconds(),
+    creator: "",
     size: 13316337664 // ~12.4 GB
   },
   {
     name: 'Development Resources',
     location: '/opt/dev-resources',
-    created: new Date('2024-03-12'),
+    createdAt: new Date('2024-03-12').getUTCMilliseconds(),
+    creator: "",
     size: 5050331136 // ~4.7 GB
   },
   {
     name: 'Legal Documents',
     location: '/secure/legal-docs',
-    created: new Date('2024-01-20'),
+    createdAt: new Date('2024-01-20').getUTCMilliseconds(),
+    creator: "",
     size: 152043520 // ~145 MB
   },
   {
     name: 'Backup Storage',
     location: 's3://company-backups/primary',
-    created: new Date('2024-02-28'),
+    createdAt: new Date('2024-02-28').getUTCMilliseconds(),
+    creator: "",
     size: 31043616768 // ~28.9 GB
   }
 ];
 
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data, error: vaultsError } = useSWR("/vaults", async () => {
-    const treaty = makeTreaty();
-    const res = await treaty.vaults.get();
-
-    if (res.error !== null) {
-      throw new Error(`Error fetching: ${res.error}`);
-    }
-
-    return res.data;
-  })
-
-  if (vaultsError) {
-    return (
-      <SidebarLayout>
-        <p>Error getting vaults</p>
-      </SidebarLayout>
-    )
-  }
-
-
-  const vaults = data === undefined ? [] : data;
+  const loaded = Route.useLoaderData();
+  const { vaults } = useVaults(loaded.vaults);
 
   // Helper function to format bytes
   const formatBytes = (bytes: number) => {
@@ -84,9 +76,8 @@ function RouteComponent() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  // Helper function to format date
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
+  const formatDate = (timestamp: number | Date) => {
+    const date = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',

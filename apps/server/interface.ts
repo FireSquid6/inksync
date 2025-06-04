@@ -6,8 +6,16 @@ import type { VaultApi } from "libinksync/client/api"
 
 export type Treaty = ReturnType<typeof getTreaty>;
 
-export function getTreaty(url: string) {
-  return treaty<App>(url);
+export function getTreaty(url: string, token?: string) {
+  if (!token) {
+    return treaty<App>(url);
+  }
+
+  return treaty<App>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    }
+  });
 }
 
 export function getApiFromAddress(address: string, name: string): VaultApi {
