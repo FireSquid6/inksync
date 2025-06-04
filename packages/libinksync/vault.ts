@@ -47,6 +47,10 @@ export class Vault {
     return this.name;
   }
 
+  getFilesystem(): Filesystem {
+    return this.fs;
+  }
+
   async isAuthorized(_: string): Promise<boolean> {
     return true;
   }

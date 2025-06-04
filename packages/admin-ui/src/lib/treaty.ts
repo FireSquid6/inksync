@@ -3,7 +3,6 @@ import { getTreaty } from "server/interface";
 export interface VaultDisplay {
   name: string;
   location: string;
-  type: "s3" | "directory";
   created: Date;
   size: number;
 }

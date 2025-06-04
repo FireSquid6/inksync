@@ -1,13 +1,13 @@
 import { Elysia } from "elysia";
-import { Vault } from "libinksync/vault";
-import { getVaultFromInfo, type Db } from "../db";
+import type { Db } from "../db";
+import { Vault, vaultFromDirectory } from "libinksync/vault";
 import * as schema from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";
+import path from "path";
 import type { Config } from "../config";
 import { randomUUID } from "crypto";
 import words from "an-array-of-english-words";
-import { localDate } from "drizzle-orm/gel-core";
 
 
 export type AuthStatus =
@@ -34,6 +34,11 @@ export interface ExpiredToken {
   type: "expired-token";
 }
 
+function getVaultFromInfo(info: schema.VaultInfo, config: Config): Promise<Vault> {
+  const filepath = path.join(config.vaultsDirectory, info.location);
+  return vaultFromDirectory(info.name, filepath);
+}
+
 
 export const vaultsPlugin = () => {
   return new Elysia({
@@ -45,7 +50,7 @@ export const vaultsPlugin = () => {
     .state("config", {} as Config)
     .use(bearer())
     .derive({ as: "global" }, (ctx) => {
-      const { db, vaults } = ctx.store
+      const { db, vaults, config} = ctx.store
       return {
         getVaultByName(name: string): Vault | null {
           const vault = vaults.find((v) => v.getName() === name);
@@ -56,7 +61,7 @@ export const vaultsPlugin = () => {
             .insert(schema.vaultsTable)
             .values(vaultInfo)
 
-          const vault = await getVaultFromInfo(vaultInfo);
+          const vault = await getVaultFromInfo(vaultInfo, config);
           vaults.push(vault);
         },
         getAllNames(): string[] {
@@ -67,7 +72,7 @@ export const vaultsPlugin = () => {
             .select()
             .from(schema.vaultsTable)
 
-          const newVaults = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i)));
+          const newVaults = await Promise.all(vaultInfos.map((i) => getVaultFromInfo(i, config)));
           ctx.store.vaults = newVaults;
         },
         async canReadVault(user: schema.User, vaultName: string): Promise<boolean> {
@@ -269,7 +274,7 @@ export const vaultsPlugin = () => {
             .insert(schema.vaultsTable)
             .values(info);
 
-          const vault = await getVaultFromInfo(info);
+          const vault = await getVaultFromInfo(info, config);
           vaults.push(vault);
 
           return info;

@@ -3,8 +3,6 @@ import path from "path";
 import type { Config } from "../config";
 import { Database } from "bun:sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { Vault, vaultFromDirectory } from "libinksync/vault";
-import { type VaultInfo } from "./schema";
 
 export type Db = ReturnType<typeof getDb>;
 
@@ -24,7 +22,3 @@ export function getDb(config: Config) {
   return db;
 }
 
-
-export function getVaultFromInfo(info: VaultInfo): Promise<Vault> {
-  return vaultFromDirectory(info.name, info.location);
-}
