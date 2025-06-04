@@ -111,12 +111,23 @@ export class DirectoryFilesystem implements Filesystem {
   }
 
   async sizeOf(filepath: string): Promise<number> {
+    const fp = path.join(this.root, filepath);
+    const stats = fs.statSync(fp);
     if (!fs.existsSync(filepath)) {
       return 0;
     }
-    const fp = path.join(this.root, filepath);
-    const stats = fs.statSync(fp);
-    return stats.size;
+    
+    if (stats.isDirectory()) {
+      const files = fs.readdirSync(filepath);
+      let size = 0;
+
+      for (const file of files) {
+        size += await this.sizeOf(path.join(filepath, file));
+      }
+      return size;
+    } else {
+      return stats.size;
+    }
   }
 
   async listdir(filepath: string, recursive: boolean = false): Promise<string[]> {
