@@ -4,7 +4,7 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
-import type { Access } from "../db/schema";
+import type { Access, VaultInfoWithSize } from "../db/schema";
 import { makeCookie } from "./cookie";
 
 export const app = new Elysia()
@@ -76,7 +76,7 @@ export const app = new Elysia()
 
     const vaults = await ctx.getAllVisibleVaults(ctx.auth.user);
 
-    const sizedVaults = await Promise.all(vaults.map(async (v) => {
+    const sizedVaults: VaultInfoWithSize[] = await Promise.all(vaults.map(async (v) => {
       const fs = ctx.getVaultByName(v.name)!.getFilesystem();
       const size = await fs.sizeOf("");
       return {

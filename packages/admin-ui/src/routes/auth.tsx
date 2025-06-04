@@ -87,7 +87,7 @@ function RouteComponent() {
     }
 
     console.log(`Successful ${mode}: ${token}`);
-    const user = await getUser(token)
+    const user = await getUser(token);
 
     if (user instanceof Error) {
       setError(user.message);

@@ -3,67 +3,19 @@ import { useState } from 'react';
 import { Plus, Search, Pencil } from 'lucide-react';
 import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
-import { useVaults } from '@/lib/state';
-import type { VaultInfoWithSize } from 'server/db/schema';
+import { useVaults } from '@/lib/hooks';
+import { getProtected } from '@/lib/state';
 
 export const Route = createFileRoute('/vaults')({
-  loader: async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return { vaults: exampleVaults };
-
+  loader: () => {
+    getProtected();
   },
   component: RouteComponent,
 })
 
-const exampleVaults: VaultInfoWithSize[] = [
-  {
-    name: 'Project Alpha Documents',
-    location: '/var/storage/project-alpha',
-    createdAt: new Date('2024-01-15').getUTCMilliseconds(),
-    creator: "",
-    size: 2469606195 // ~2.3 GB
-  },
-  {
-    name: 'Marketing Assets',
-    location: 's3://company-marketing-bucket/assets',
-    createdAt: new Date('2024-02-03').getUTCMilliseconds(),
-    creator: "",
-    size: 897581056 // ~856 MB
-  },
-  {
-    name: 'Customer Data Archive',
-    location: 's3://customer-archive/data',
-    createdAt: new Date('2024-01-08').getUTCMilliseconds(),
-    creator: "",
-    size: 13316337664 // ~12.4 GB
-  },
-  {
-    name: 'Development Resources',
-    location: '/opt/dev-resources',
-    createdAt: new Date('2024-03-12').getUTCMilliseconds(),
-    creator: "",
-    size: 5050331136 // ~4.7 GB
-  },
-  {
-    name: 'Legal Documents',
-    location: '/secure/legal-docs',
-    createdAt: new Date('2024-01-20').getUTCMilliseconds(),
-    creator: "",
-    size: 152043520 // ~145 MB
-  },
-  {
-    name: 'Backup Storage',
-    location: 's3://company-backups/primary',
-    createdAt: new Date('2024-02-28').getUTCMilliseconds(),
-    creator: "",
-    size: 31043616768 // ~28.9 GB
-  }
-];
-
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
-  const loaded = Route.useLoaderData();
-  const { vaults } = useVaults(loaded.vaults);
+  const { vaults } = useVaults();
 
   // Helper function to format bytes
   const formatBytes = (bytes: number) => {
