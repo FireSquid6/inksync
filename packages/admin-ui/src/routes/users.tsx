@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react';
-import { Plus, Pencil, Shield, User } from 'lucide-react';
+import { Plus, Pencil, Shield, User, Key, Copy, Trash2 } from 'lucide-react';
 import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
 import { PageHeader, SearchBar, DataTable, EmptyState, ResultsCount, formatDate } from '@/components/table';
@@ -53,13 +53,63 @@ const dummyUsers = [
   },
 ];
 
+// Dummy joincode data
+const dummyJoincodes = [
+  {
+    id: "jc_1",
+    code: "JOIN-ALPHA-2024",
+    createdBy: "alice_smith",
+    createdAt: new Date("2024-06-01"),
+    expiresAt: new Date("2024-07-01"),
+    maxUses: 10,
+    currentUses: 3,
+    status: "active"
+  },
+  {
+    id: "jc_2", 
+    code: "JOIN-BETA-2024",
+    createdBy: "diana_wilson",
+    createdAt: new Date("2024-05-20"),
+    expiresAt: new Date("2024-06-20"),
+    maxUses: 5,
+    currentUses: 5,
+    status: "expired"
+  },
+  {
+    id: "jc_3",
+    code: "JOIN-TEMP-2024",
+    createdBy: "alice_smith", 
+    createdAt: new Date("2024-06-03"),
+    expiresAt: new Date("2024-12-31"),
+    maxUses: 1,
+    currentUses: 0,
+    status: "active"
+  },
+  {
+    id: "jc_4",
+    code: "JOIN-TEAM-2024",
+    createdBy: "diana_wilson",
+    createdAt: new Date("2024-05-15"),
+    expiresAt: new Date("2024-08-15"),
+    maxUses: 20,
+    currentUses: 12,
+    status: "active"
+  },
+];
+
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [joincodeSearchTerm, setJoincodeSearchTerm] = useState('');
 
   const filteredUsers = dummyUsers.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredJoincodes = dummyJoincodes.filter(joincode =>
+    joincode.code.toLowerCase().includes(joincodeSearchTerm.toLowerCase()) ||
+    joincode.createdBy.toLowerCase().includes(joincodeSearchTerm.toLowerCase())
   );
 
   const getRoleIcon = (role: string) => {
@@ -86,6 +136,30 @@ function RouteComponent() {
 
   const getStatusBadgeClass = (status: string) => {
     return status === 'active' ? 'badge-success' : 'badge-ghost';
+  };
+
+  const getJoincodeStatusBadgeClass = (joincode: any) => {
+    if (joincode.status === 'expired' || new Date() > joincode.expiresAt) {
+      return 'badge-error';
+    }
+    if (joincode.currentUses >= joincode.maxUses) {
+      return 'badge-warning';
+    }
+    return 'badge-success';
+  };
+
+  const getJoincodeStatusText = (joincode: any) => {
+    if (joincode.status === 'expired' || new Date() > joincode.expiresAt) {
+      return 'expired';
+    }
+    if (joincode.currentUses >= joincode.maxUses) {
+      return 'exhausted';
+    }
+    return 'active';
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
 
   return (
@@ -175,6 +249,103 @@ function RouteComponent() {
           totalCount={dummyUsers.length}
           itemName="users"
         />
+
+        {/* Joincodes Section */}
+        <div className="mt-12">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold">Join Codes</h2>
+              <p className="text-base-content/70 mt-1">
+                Manage invitation codes for new users
+              </p>
+            </div>
+            <button className="btn btn-primary gap-2">
+              <Key className="w-4 h-4" />
+              Generate Code
+            </button>
+          </div>
+
+          <SearchBar
+            searchTerm={joincodeSearchTerm}
+            onSearchChange={setJoincodeSearchTerm}
+            placeholder="Search join codes..."
+          />
+
+          <DataTable headers={["Code", "Created By", "Usage", "Expires", "Status", "Actions"]}>
+            {filteredJoincodes.length === 0 ? (
+              <EmptyState
+                message={joincodeSearchTerm ? "No join codes match your search" : "No join codes found"}
+                colSpan={6}
+              />
+            ) : (
+              filteredJoincodes.map((joincode) => (
+                <tr key={joincode.id} className="hover">
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-sm bg-base-200 px-2 py-1 rounded">
+                        {joincode.code}
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(joincode.code)}
+                        className="btn btn-ghost btn-xs"
+                        title="Copy to clipboard"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="text-sm">{joincode.createdBy}</div>
+                    <div className="text-xs text-base-content/70">
+                      {formatDate(joincode.createdAt)}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="text-sm">
+                      <span className="font-medium">{joincode.currentUses}</span>
+                      <span className="text-base-content/70"> / {joincode.maxUses}</span>
+                    </div>
+                    <div className="w-full bg-base-200 rounded-full h-1.5 mt-1">
+                      <div
+                        className="bg-primary h-1.5 rounded-full"
+                        style={{
+                          width: `${Math.min((joincode.currentUses / joincode.maxUses) * 100, 100)}%`
+                        }}
+                      ></div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="text-sm">{formatDate(joincode.expiresAt)}</div>
+                  </td>
+                  <td>
+                    <span className={`badge ${getJoincodeStatusBadgeClass(joincode)} badge-sm`}>
+                      {getJoincodeStatusText(joincode)}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex gap-1">
+                      <button className="btn btn-ghost btn-sm gap-1">
+                        <Pencil className="w-4 h-4" />
+                        Edit
+                      </button>
+                      <button className="btn btn-ghost btn-sm gap-1 text-error">
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </DataTable>
+
+          <ResultsCount
+            searchTerm={joincodeSearchTerm}
+            filteredCount={filteredJoincodes.length}
+            totalCount={dummyJoincodes.length}
+            itemName="join codes"
+          />
+        </div>
       </div>
     </SidebarLayout>
   );
