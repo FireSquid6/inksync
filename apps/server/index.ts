@@ -4,11 +4,14 @@ import { getDb, type Db } from "./db";
 import * as schema from "./db/schema";
 import { uiPlugin } from "./http/ui";
 import { treaty } from "@elysiajs/eden";
+import { generateJoincode } from "./http/plugin";
 
 export async function startApp(config: Config) {
   const db = getDb(config);
 
-  await ensureJoinable(db);
+  if (config.ensureJoinable) {
+    await ensureJoinable(db);
+  }
 
   app.store.db = db;
   app.store.config = config;
@@ -31,15 +34,27 @@ async function ensureJoinable(db: Db) {
     .select()
     .from(schema.usersTable);
 
-  if (users.length > 0 ) {
+  if (users.length > 0) {
     return;
   }
-
-  
   // delete all joincodes
   await db
     .delete(schema.joincodeTable);
-  
+
+  const code = generateJoincode();
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+  await db
+    .insert(schema.joincodeTable)
+    .values({
+      code,
+      role: "Superadmin",
+      expiresAt,
+      creator: "virgin birth joincode",
+    });
+
+  console.log("No users detected. Here's a joincode to create your superadmin:");
+  console.log(code);
 }
 
 export function startTestApp() {

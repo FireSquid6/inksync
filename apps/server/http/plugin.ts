@@ -429,7 +429,7 @@ function newRandomToken(): string {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function generateJoincode(): string {
+export function generateJoincode(): string {
   const filteredWords = words.filter(word => word.length >= 4 && word.length <= 8);
 
   const selectedWords = [];
