@@ -1,9 +1,40 @@
+import { makeTreaty } from '@/lib/treaty';
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, type ChangeEventHandler, type MouseEventHandler } from 'react';
 
 export const Route = createFileRoute('/auth')({
   component: RouteComponent,
 })
+
+async function signIn(username: string, password: string): Promise<string | Error> {
+  const treaty = makeTreaty();
+  const { data, error } = await treaty.tokens.post({
+    username,
+    password,
+  });
+
+  if (error !== null) {
+    return new Error(`Couldn't sign in: ${error.value}`);
+  }
+
+  return data;
+}
+
+async function signUp(username: string, password: string, joincode: string): Promise<string | Error> {
+  const treaty = makeTreaty();
+  const { data, error } = await treaty.users.post({
+    username,
+    password,
+    joincode,
+  });
+
+  
+  if (error !== null) {
+    return new Error(`Couldn't sign up: ${error.value}`);
+  }
+
+  return data.id;
+}
 
 
 function RouteComponent() {
@@ -14,6 +45,7 @@ function RouteComponent() {
     joinKey: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
 
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const { name, value } = e.target;
@@ -26,10 +58,20 @@ function RouteComponent() {
   const handleSubmit: MouseEventHandler<HTMLButtonElement> = async (e) => {
     e.preventDefault();
     setLoading(true);
+    if (mode === "signup") {
+      const signupRes = await signUp(formData.username, formData.password, formData.joinKey);
+      if (signupRes instanceof Error) {
+        setError(signupRes.message);
+        setLoading(false);
+      }
+      return;
+    }
+    const signinRes = await signIn(formData.username, formData.password);
+    if (signinRes instanceof Error) {
+      setError(signinRes.message);
+    }
     
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log(`${mode} attempt:`, formData);
+    console.log(`${mode} attempt:`, signinRes);
     setLoading(false);
   };
 

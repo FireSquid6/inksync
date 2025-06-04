@@ -70,7 +70,21 @@ export const app = new Elysia()
     })
   })
   .get("/vaults", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated");
+    }
 
+    const vaults = await ctx.getAllVisibleVaults(ctx.auth.user);
+
+    const sizedVaults = await Promise.all(vaults.map(async (v) => {
+      const fs = ctx.getVaultByName(v.name)!.getFilesystem();
+      const size = await fs.sizeOf("");
+      return {
+        ...v,
+        size,
+      }
+    }));
+    return sizedVaults;
   })
   .get("/vaults/:vault", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
@@ -280,7 +294,11 @@ export const app = new Elysia()
       return ctx.status(400, "Joincode was invalid");
     }
 
-    return user;
+    return {
+      id: user.id,
+      username: user.id,
+      role: user.role,
+    };
   }, {
     body: t.Object({
       joincode: t.String(),
@@ -348,12 +366,16 @@ export const app = new Elysia()
       return ctx.status("Unauthorized", "Must be authenticated to access");
     }
 
-    const user = ctx.getUser(ctx.params.id);
+    const user = await ctx.getUser(ctx.params.id);
     if (user === null) {
       return ctx.status("Not Found", `User ${ctx.params.id} not found`);
     }
 
-    return ctx.status("OK", user);
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role
+    }
   })
   .post("/tokens", async (ctx) => {
     await waitForRandomAmount();

@@ -333,6 +333,27 @@ export const vaultsPlugin = () => {
           const vaults = await db
             .select()
             .from(schema.vaultsTable);
+
+          if (user.role === "Admin" || user.role === "Superadmin") {
+            return vaults;
+          }
+
+          const access = await db
+            .select()
+            .from(schema.accessTable)
+            .where(eq(schema.accessTable.userId, user.id));
+
+          const newVaults: schema.VaultInfo[] = [];
+
+          for (const vault of vaults) {
+            const permission = access.find((a) => a.vaultName === vault.name);
+            if (!permission) {
+              continue;
+            }
+
+          }
+
+          return newVaults
         },
       }
     })

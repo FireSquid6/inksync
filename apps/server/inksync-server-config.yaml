@@ -1,1 +1,4 @@
 serveUI: false
+vaulsDirectory: store/vaults
+databasePath: store/database.sqlite
+ensureJoinable: true

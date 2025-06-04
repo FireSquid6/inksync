@@ -51,10 +51,27 @@ const vaults: VaultDisplay[] = [
 
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: vaults, error: vaultsError, vaultsLoading } = useSWR("/vaults", async () => {
+  const { data, error: vaultsError } = useSWR("/vaults", async () => {
     const treaty = makeTreaty();
-    return treaty.vaults
+    const res = await treaty.vaults.get();
+
+    if (res.error !== null) {
+      throw new Error(`Error fetching: ${res.error}`);
+    }
+
+    return res.data;
   })
+
+  if (vaultsError) {
+    return (
+      <SidebarLayout>
+        <p>Error getting vaults</p>
+      </SidebarLayout>
+    )
+  }
+
+
+  const vaults = data === undefined ? [] : data;
 
   // Helper function to format bytes
   const formatBytes = (bytes: number) => {
@@ -68,7 +85,8 @@ function RouteComponent() {
   };
 
   // Helper function to format date
-  const formatDate = (date: Date) => {
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -150,7 +168,7 @@ function RouteComponent() {
                           </div>
                         </td>
                         <td>
-                          <div className="text-sm">{formatDate(vault.created)}</div>
+                          <div className="text-sm">{formatDate(vault.createdAt)}</div>
                         </td>
                         <td>
                           <div className="text-sm font-medium">{formatBytes(vault.size)}</div>

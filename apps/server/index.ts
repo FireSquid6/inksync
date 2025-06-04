@@ -1,11 +1,15 @@
 import { getConfigFromPartial, type Config } from "./config";
 import { app } from "./http";
-import { getDb } from "./db";
+import { getDb, type Db } from "./db";
+import * as schema from "./db/schema";
 import { uiPlugin } from "./http/ui";
 import { treaty } from "@elysiajs/eden";
 
-export function startApp(config: Config) {
+export async function startApp(config: Config) {
   const db = getDb(config);
+
+  await ensureJoinable(db);
+
   app.store.db = db;
   app.store.config = config;
   app.store.vaults = [];
@@ -22,6 +26,21 @@ export function startApp(config: Config) {
   return { app, db };
 }
 
+async function ensureJoinable(db: Db) {
+  const users = await db
+    .select()
+    .from(schema.usersTable);
+
+  if (users.length > 0 ) {
+    return;
+  }
+
+  
+  // delete all joincodes
+  await db
+    .delete(schema.joincodeTable);
+  
+}
 
 export function startTestApp() {
   const config = getConfigFromPartial({
