@@ -6,6 +6,7 @@ import { SidebarLayout } from '@/components/layout';
 import { PageHeader, SearchBar, DataTable, EmptyState, ResultsCount, formatDate } from '@/components/table';
 import { getProtected } from '@/lib/state';
 import { useJoincodes, useUsers } from '@/lib/hooks';
+import { Modal } from '@/components/modal';
 
 export const Route = createFileRoute('/users')({
   loader: () => {
@@ -19,7 +20,7 @@ function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [joincodeSearchTerm, setJoincodeSearchTerm] = useState('');
   const { users } = useUsers();
-  const { joincodes } = useJoincodes();
+  const { joincodes, createJoincode } = useJoincodes();
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,6 +31,9 @@ function RouteComponent() {
     joincode.code.toLowerCase().includes(joincodeSearchTerm.toLowerCase()) ||
     joincode.creator.toLowerCase().includes(joincodeSearchTerm.toLowerCase())
   );
+  const [modalOpen, setModalOpen] = useState(false);
+  const [generatedJoincode, setGeneratedJoincode] = useState<string>("");
+  const [generatingJoincode, setGeneratingJoincode] = useState<boolean>(false);
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -41,6 +45,18 @@ function RouteComponent() {
         return <User className="w-4 h-4 text-blue-500" />;
     }
   };
+
+  const generateJoincode = async (admin: boolean) => {
+    setGeneratingJoincode(true);
+    const joincode = await createJoincode(admin ? "Admin" : "User");
+    setGeneratingJoincode(false);
+
+    if (joincode === null) {
+      return;
+    }
+    setGeneratedJoincode(joincode.code);
+    setModalOpen(true);
+  }
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
@@ -149,9 +165,13 @@ function RouteComponent() {
                 Manage invitation codes for new users
               </p>
             </div>
-            <button className="btn btn-primary gap-2">
+            <button disabled={generatingJoincode} onClick={() => generateJoincode(false)} className="btn btn-primary gap-2">
               <Key className="w-4 h-4" />
-              Generate Code
+              Generate User Code
+            </button>
+            <button disabled={generatingJoincode} onClick={() => generateJoincode(true)} className="btn btn-error gap-">
+              <Key className="w-4 h-4" />
+              Generate Admin Code
             </button>
           </div>
 
@@ -161,7 +181,7 @@ function RouteComponent() {
             placeholder="Search join codes..."
           />
 
-          <DataTable headers={["Code", "Created By", "Expires", "Status", "Actions"]}>
+          <DataTable headers={["Code", "Created By", "Expires", "Status", "Role", "Actions"]}>
             {filteredJoincodes.length === 0 ? (
               <EmptyState
                 message={joincodeSearchTerm ? "No join codes match your search" : "No join codes found"}
@@ -196,11 +216,14 @@ function RouteComponent() {
                     </span>
                   </td>
                   <td>
+                    <div className="flex items-center gap-2">
+                      <span className={`badge ${getRoleBadgeClass(joincode.role)} badge-sm`}>
+                        {joincode.role}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
                     <div className="flex gap-1">
-                      <button className="btn btn-ghost btn-sm gap-1">
-                        <Pencil className="w-4 h-4" />
-                        Edit
-                      </button>
                       <button className="btn btn-ghost btn-sm gap-1 text-error">
                         <Trash2 className="w-4 h-4" />
                         Delete
@@ -218,6 +241,16 @@ function RouteComponent() {
             totalCount={joincodes.length}
             itemName="join codes"
           />
+          <Modal
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+            }}
+            title="Joincode"
+          >
+            <p>{generatedJoincode}</p>
+
+          </Modal>
         </div>
       </div>
     </SidebarLayout>

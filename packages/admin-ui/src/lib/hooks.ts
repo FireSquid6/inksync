@@ -5,6 +5,7 @@ import type { Treaty } from "server/interface";
 import { makeTreaty } from "./treaty";
 import type { FetchedJoincode, Joincode, PublicUser, VaultInfoWithSize } from "server/db/schema";
 import { wrapError } from "./helpers";
+import { useMemo } from "react";
 
 export function usePushError() {
   const [_, setError] = useAtom(errorsAtom);
@@ -21,10 +22,11 @@ export function useTreaty(): Treaty {
 }
 
 export function useVaults(): { vaults: VaultInfoWithSize[], loading: boolean } {
+  console.log("calling use vaults");
   const treaty = useTreaty();
   const pushError = usePushError();
 
-  const fetcher = async (): Promise<VaultInfoWithSize[]> => {
+  const fetcher = useMemo(() => async (): Promise<VaultInfoWithSize[]> => {
     console.log("Fetching vaults");
     const { data, error } = await treaty.vaults.get();
 
@@ -34,7 +36,7 @@ export function useVaults(): { vaults: VaultInfoWithSize[], loading: boolean } {
     }
 
     return data;
-  }
+  }, [treaty, pushError]);
 
   const { data, isLoading } = useSWR("/vaults", fetcher);
 
@@ -45,10 +47,11 @@ export function useVaults(): { vaults: VaultInfoWithSize[], loading: boolean } {
 }
 
 export function useUsers(): { users: PublicUser[], loading: boolean } {
+  console.log("calling use users");
   const treaty = useTreaty();
   const pushError = usePushError(); 
 
-  const fetcher = async (): Promise<PublicUser[]> => {
+  const fetcher = useMemo(() => async (): Promise<PublicUser[]> => {
     const { data, error } = await treaty.users.get();
 
     if (error !== null) {
@@ -57,7 +60,7 @@ export function useUsers(): { users: PublicUser[], loading: boolean } {
     }
 
     return data;
-  }
+  }, [treaty, pushError]);
 
   const { data, isLoading } = useSWR("/users", fetcher);
 
@@ -77,11 +80,12 @@ export interface JoincodesHook {
 
 
 export function useJoincodes(): JoincodesHook {
+  console.log("calling use joincode");
   const treaty = useTreaty();
   const pushError = usePushError();
   const { mutate } = useSWRConfig();
 
-  const createJoincode = async (role: string): Promise<Joincode | null> => {
+  const createJoincode = useMemo(() => async (role: string): Promise<Joincode | null> => {
     const { data, error } = await treaty.joincodes.post({ role });
 
     if (error !== null) {
@@ -90,22 +94,21 @@ export function useJoincodes(): JoincodesHook {
 
     mutate("/joincodes");
     return data;
-  }
+  }, [treaty, pushError, mutate])
 
-  const deleteJoincode = async (code: string): Promise<void> => {
+  const deleteJoincode = useMemo(() => async (code: string): Promise<void> => {
     pushError(wrapError("Error deleting joincode", new Error("Joincode deletion not implemented yet")));
-  }
+  }, [pushError]);
 
-  const fetcher = async () => {
+  const fetcher = useMemo(() => async () => {
     const { data, error } = await treaty.joincodes.get();
 
     if (error !== null) {
       pushError(wrapError("Error fetching joincodes", error));
     }
 
-    mutate("/joincodes");
     return data ?? [];
-  }
+  }, [treaty, pushError]);
 
   const { data: joincodes, isLoading } = useSWR("/joincodes", fetcher);
 
