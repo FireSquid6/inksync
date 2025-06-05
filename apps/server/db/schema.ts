@@ -13,6 +13,7 @@ export const usersTable = sqliteTable("users_table", {
   hashedPassword: text().notNull(),
   role: text().notNull().$type<Role>(),
 });
+
 export type User = InferSelectModel<typeof usersTable>;
 export type InsertUser = InferInsertModel<typeof usersTable>;
 export type PublicUser = Omit<User, "hashedPassword">;
@@ -54,3 +55,4 @@ export const joincodeTable = sqliteTable("joincodes", {
   creator: text().notNull().references(() => usersTable.id),
 });
 export type Joincode = InferSelectModel<typeof joincodeTable>;
+export type FetchedJoincode = Joincode & { creator: User };

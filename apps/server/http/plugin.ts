@@ -50,7 +50,7 @@ export const vaultsPlugin = () => {
     .state("config", {} as Config)
     .use(bearer())
     .derive({ as: "global" }, (ctx) => {
-      const { db, vaults, config} = ctx.store
+      const { db, vaults, config } = ctx.store
       return {
         getVaultByName(name: string): Vault | null {
           const vault = vaults.find((v) => v.getName() === name);
@@ -258,10 +258,22 @@ export const vaultsPlugin = () => {
             .delete(schema.joincodeTable)
             .where(eq(schema.joincodeTable.code, code));
         },
-        async getAllJoincodes(): Promise<schema.Joincode[]> {
-          return await db
-            .select()
-            .from(schema.joincodeTable);
+        async getAllJoincodes(): Promise<schema.FetchedJoincode[]> {
+          const fetchedJoincodes = await db
+            .select({
+              code: schema.joincodeTable.code,
+              role: schema.joincodeTable.role,
+              expiresAt: schema.joincodeTable.expiresAt,
+              creator: {
+                id: schema.usersTable.id,
+                username: schema.usersTable.username,
+                role: schema.usersTable.role,
+              }
+            })
+            .from(schema.joincodeTable)
+            .leftJoin(schema.usersTable, eq(schema.joincodeTable.creator, schema.usersTable.id));
+
+          return fetchedJoincodes as schema.FetchedJoincode[];
         },
         async createVault(vaultName: string, directory: string, userId: string): Promise<schema.VaultInfo> {
           const info: schema.VaultInfo = {

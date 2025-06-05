@@ -3,7 +3,7 @@ import { errorsAtom, authAtom } from "./state";
 import useSWR, { useSWRConfig } from "swr";
 import type { Treaty } from "server/interface";
 import { makeTreaty } from "./treaty";
-import type { Joincode, PublicUser, VaultInfoWithSize } from "server/db/schema";
+import type { FetchedJoincode, Joincode, PublicUser, VaultInfoWithSize } from "server/db/schema";
 import { wrapError } from "./helpers";
 
 export function usePushError() {
@@ -70,7 +70,7 @@ export function useUsers(): { users: PublicUser[], loading: boolean } {
 
 export interface JoincodesHook {
   loading: boolean;
-  joincodes: Joincode[];
+  joincodes: FetchedJoincode[];
   createJoincode(role: string): Promise<Joincode | null>;
   deleteJoincode(code: string): Promise<void>;
 }
