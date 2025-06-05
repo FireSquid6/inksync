@@ -118,7 +118,7 @@ function RouteComponent() {
         <div className="card-body">
           {/* Header */}
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold mb-2">File Sync Admin</h1>
+            <h1 className="text-3xl font-bold mb-2">Inksync Admin</h1>
             <p className="text-base-content/70">
               {mode === 'signin' ? 'Sign in to your account' : 'Create a new account'}
             </p>

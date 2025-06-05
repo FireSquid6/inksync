@@ -40,7 +40,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
             </label>
           </div>
           <div className="flex-1">
-            <span className="text-xl font-bold">File Sync Admin</span>
+            <span className="text-xl font-bold">Inksync Admin</span>
           </div>
         </div>
         
@@ -57,7 +57,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           {/* Logo/Header */}
           <div className="p-4 border-b border-base-300">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold">File Sync Admin</h1>
+              <h1 className="text-xl font-bold">Inksync Admin</h1>
               <button 
                 className="btn btn-ghost btn-sm lg:hidden"
                 onClick={() => setSidebarOpen(false)}
