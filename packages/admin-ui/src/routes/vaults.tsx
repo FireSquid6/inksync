@@ -125,7 +125,7 @@ function RouteComponent() {
                             className="btn btn-ghost btn-sm gap-1"
                           >
                             <Pencil className="w-4 h-4" />
-                            Edit
+                            Details
                           </Link>
                         </td>
                       </tr>

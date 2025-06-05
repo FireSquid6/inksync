@@ -20,7 +20,7 @@ function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [joincodeSearchTerm, setJoincodeSearchTerm] = useState('');
   const { users } = useUsers();
-  const { joincodes, createJoincode } = useJoincodes();
+  const { joincodes, createJoincode, deleteJoincode } = useJoincodes();
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -224,7 +224,7 @@ function RouteComponent() {
                   </td>
                   <td>
                     <div className="flex gap-1">
-                      <button className="btn btn-ghost btn-sm gap-1 text-error">
+                      <button onClick={() => deleteJoincode(joincode.code)} className="btn btn-ghost btn-sm gap-1 text-error">
                         <Trash2 className="w-4 h-4" />
                         Delete
                       </button>
