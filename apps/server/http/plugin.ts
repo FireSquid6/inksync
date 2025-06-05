@@ -355,6 +355,20 @@ export const vaultsPlugin = () => {
 
           return newVaults
         },
+        async getAllUsers(): Promise<schema.PublicUser[]> {
+          const users = await db
+            .select()
+            .from(schema.usersTable);
+
+          return users.map((u): schema.PublicUser => {
+            return {
+              username: u.username,
+              id: u.id,
+              role: u.role,
+            }
+          })
+
+        },
       }
     })
     .derive({ as: "global" }, async (ctx): Promise<{ auth: AuthStatus }> => {

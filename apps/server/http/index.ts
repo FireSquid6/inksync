@@ -306,6 +306,13 @@ export const app = new Elysia()
       password: t.String(),
     }),
   })
+  .get("/users", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized");
+    }
+
+    return await ctx.getAllUsers();
+  })
   .patch("/users/:id", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized");
