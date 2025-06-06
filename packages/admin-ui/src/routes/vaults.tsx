@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
 import { useVaults } from '@/lib/hooks';
 import { getProtected } from '@/lib/state';
+import { CreateVaultModal } from '@/components/create-vault-modal';
 
 export const Route = createFileRoute('/vaults')({
   loader: () => {
@@ -15,7 +16,16 @@ export const Route = createFileRoute('/vaults')({
 
 function RouteComponent() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { vaults } = useVaults();
+  const { vaults, createVault } = useVaults();
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [modalLoading, setModalLoading] = useState<boolean>(false);
+
+  const onSubmit = async ({ directory, vaultName }: { directory: string, vaultName: string}) => {
+    setModalLoading(true);
+    await createVault(vaultName, directory);
+    setModalLoading(false);
+    setModalOpen(false);
+  }
 
   // Helper function to format bytes
   const formatBytes = (bytes: number) => {
@@ -54,7 +64,7 @@ function RouteComponent() {
               Manage your file synchronization vaults
             </p>
           </div>
-          <button className="btn btn-primary gap-2">
+          <button onClick={() => setModalOpen(true)} className="btn btn-primary gap-2">
             <Plus className="w-4 h-4" />
             New Vault
           </button>
@@ -144,6 +154,12 @@ function RouteComponent() {
           </div>
         )}
       </div>
+      <CreateVaultModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={onSubmit}
+        loading={modalLoading}
+      />
     </SidebarLayout>
   );
 }

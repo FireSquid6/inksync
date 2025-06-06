@@ -22,10 +22,12 @@ export function useTreaty(): Treaty {
   return makeTreaty(auth?.session.token);
 }
 
-export function useVaults(): { vaults: VaultInfoWithSize[], loading: boolean } {
+
+export function useVaults() {
   console.log("calling use vaults");
   const treaty = useTreaty();
   const pushError = usePushError();
+  const { mutate } = useSWRConfig();
 
   const fetcher = useMemo(() => async (): Promise<VaultInfoWithSize[]> => {
     console.log("Fetching vaults");
@@ -41,9 +43,23 @@ export function useVaults(): { vaults: VaultInfoWithSize[], loading: boolean } {
 
   const { data, isLoading } = useSWR("/vaults", fetcher);
 
+  const createVault = useMemo(() => async (vaultName: string, directory: string) => {
+    const { error } = await treaty.vaults.post({
+      vaultName,
+      directory,
+    });
+    mutate("/vaults");
+
+    if (error !== null) {
+      pushError(wrapError("Error creating vault:", error.value));
+    }
+
+  }, [treaty, pushError])
+
   return {
     vaults: data ?? [],
     loading: isLoading,
+    createVault,
   };
 }
 

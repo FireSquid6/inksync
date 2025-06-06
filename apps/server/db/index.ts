@@ -3,6 +3,8 @@ import path from "path";
 import type { Config } from "../config";
 import { Database } from "bun:sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { lt } from "drizzle-orm";
+import { tokensTable, joincodeTable } from "./schema";
 
 export type Db = ReturnType<typeof getDb>;
 
@@ -22,3 +24,10 @@ export function getDb(config: Config) {
   return db;
 }
 
+
+export function cleanDb(db: Db) {
+  const now = Date.now();
+  
+  db.delete(tokensTable).where(lt(tokensTable.expiresAt, now)).run();
+  db.delete(joincodeTable).where(lt(joincodeTable.expiresAt, now)).run();
+}
