@@ -8,10 +8,13 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useSignOut } from '@/lib/state';
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const signOut = useSignOut();
+  const navigate = useNavigate({ from: "/" });
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home, link: "/" },
@@ -19,6 +22,15 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     { id: 'users', label: 'Users', icon: Users, link: "/users" },
     { id: 'profile', label: 'Profile', icon: User, link: "/profile" },
   ];
+
+  const onSignOutClicked = () => {
+    signOut(() => {
+      navigate({
+        to: "/auth",
+      });
+    })
+    
+  }
 
   return (
     <div className="drawer lg:drawer-open">
@@ -89,7 +101,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
           {/* Sign out button */}
           <div className="p-4 border-t border-base-300">
-            <button className="btn btn-ghost w-full justify-start text-error hover:bg-error hover:text-error-content">
+            <button onClick={onSignOutClicked} className="btn btn-ghost w-full justify-start text-error hover:bg-error hover:text-error-content">
               <LogOut className="w-5 h-5" />
               Sign Out
             </button>
