@@ -11,6 +11,7 @@ export function usePushError() {
   const [_, setError] = useAtom(errorsAtom);
 
   return (err: Error) => {
+    console.log(err);
     setError(err);
   }
 }

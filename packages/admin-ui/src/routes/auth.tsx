@@ -4,6 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, type ChangeEventHandler } from 'react';
 import { useAtom } from "jotai";
 import type { PublicUser, Token } from "server/db/schema";
+import { usePushError } from '@/lib/hooks';
 
 export const Route = createFileRoute('/auth')({
   component: RouteComponent,
@@ -17,7 +18,7 @@ async function signIn(username: string, password: string): Promise<Token | Error
   });
 
   if (error !== null) {
-    return new Error(`Couldn't sign in: ${error.value}`);
+    return new Error(`Couldn't sign in: ${error.value}. Was your username or password incorrect?`);
   }
 
   return data;
@@ -60,8 +61,8 @@ function RouteComponent() {
     joinKey: ''
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
   const [_, setAuth] = useAtom(authAtom);
+  const pushError = usePushError();
 
   const handleInputChange: ChangeEventHandler<HTMLInputElement> = (e) => {
     const { name, value } = e.target;
@@ -75,14 +76,14 @@ function RouteComponent() {
     if (mode === "signup") {
       const signupRes = await signUp(formData.username, formData.password, formData.joinKey);
       if (signupRes instanceof Error) {
-        setError(signupRes.message);
+        pushError(signupRes);
         setLoading(false);
         return;
       }
     }
     const token = await signIn(formData.username, formData.password);
     if (token instanceof Error) {
-      setError(token.message);
+      pushError(token);
       return;
     }
 
@@ -90,7 +91,7 @@ function RouteComponent() {
     const user = await getUser(token);
 
     if (user instanceof Error) {
-      setError(user.message);
+      pushError(user);
       return;
     }
 
@@ -210,6 +211,11 @@ function RouteComponent() {
                   e.preventDefault();
                   setLoading(true);
                   await handleSubmit();
+                  setFormData({
+                    username: "",
+                    password: "",
+                    joinKey: "",
+                  });
                   setLoading(false);
                 }}
                 className={`btn btn-primary ${loading ? 'loading' : ''}`}
@@ -243,7 +249,6 @@ function RouteComponent() {
               </button>
             </div>
           )}
-          <p className="text-error">{error}</p>
         </div>
       </div>
     </div>
