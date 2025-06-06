@@ -456,7 +456,7 @@ export const app = new Elysia()
       role: t.String(),
     })
   })
-  .delete("joincodes/:code", async (ctx) => {
+  .delete("/joincodes/:code", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized", `Must be authenticated to access, instead ${ctx.auth.type}`);
     }
@@ -473,6 +473,7 @@ export const app = new Elysia()
       return ctx.status("OK");
     }
     return ctx.status("Unauthorized");
+
   })
   .get("/joincodes", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {

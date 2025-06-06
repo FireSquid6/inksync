@@ -98,7 +98,13 @@ export function useJoincodes(): JoincodesHook {
   }, [treaty, pushError, mutate])
 
   const deleteJoincode = useMemo(() => async (code: string): Promise<void> => {
-    pushError(wrapError("Error deleting joincode", new Error("Joincode deletion not implemented yet")));
+    const { error } = await treaty.joincodes({ code: code }).delete();
+    
+    if (error !== null) {
+      pushError(wrapError("Error deleting joincode", error));
+    }
+
+    mutate("/joincodes");
   }, [pushError]);
 
   const fetcher = useMemo(() => async () => {
