@@ -54,12 +54,22 @@ export const app = new Elysia()
       return ctx.status("Unauthorized");
     }
     const { user } = ctx.auth;
+    const { vaults } = ctx.store;
 
     if (!(user.role === "Admin" || user.role === "Superadmin")) {
       return ctx.status("Unauthorized", "Must be an admin to make new vaults");
     }
 
     const { vaultName, directory } = ctx.body;
+
+    if (vaultName.length <= 4 || vaultName.length >= 16) {
+      return ctx.status("Bad Request", "Vault name must be between 4 and 16 characters");
+    }
+
+    const duplicateName = vaults.find((v) => v.getName() === vaultName);
+    if (duplicateName !== undefined) {
+      return ctx.status("Bad Request", "Vault name taken");
+    }
 
     const vault = await ctx.createVault(vaultName, directory, user.id);
     return vault;
