@@ -6,7 +6,6 @@ import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
 import type { Access, VaultInfoWithSize } from "../db/schema";
 import { makeCookie } from "./cookie";
-import { cron } from "@elysiajs/cron";
 
 export const app = new Elysia()
   .use(loggerPlugin)

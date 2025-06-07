@@ -14,11 +14,12 @@ function App() {
 
   return (
     <SidebarLayout>
-      <p>Hello, world!</p>
-      <p>Auth information:</p>
-      <p>{user.username}</p>
-      <p>{user.role}</p>
-      <p>{user.id}</p>
+      <p>This page is a work in progress!</p>
+      <pre className="rounded-xl bg-base-300 p-4 m-4">
+        <p>User: {user.username}</p>
+        <p>Role: {user.role}</p>
+        <p>Id: {user.id}</p>
+      </pre>
     </SidebarLayout>
   )
 }

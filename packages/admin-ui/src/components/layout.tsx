@@ -20,7 +20,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     { id: 'home', label: 'Home', icon: Home, link: "/" },
     { id: 'vaults', label: 'Vaults', icon: Folder, link: "/vaults" },
     { id: 'users', label: 'Users', icon: Users, link: "/users" },
-    { id: 'profile', label: 'Profile', icon: User, link: "/profile" },
   ];
 
   const onSignOutClicked = () => {
