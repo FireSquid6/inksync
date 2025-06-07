@@ -128,7 +128,7 @@ function RouteComponent() {
                         </td>
                         <td>
                           <Link
-                            to="/vaults/$vault"
+                            to="/vault/$vault"
                             params={{
                               vault: vault.name
                             }}

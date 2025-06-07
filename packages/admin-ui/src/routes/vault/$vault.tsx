@@ -6,7 +6,7 @@ import { SidebarLayout } from '@/components/layout';
 import { DirectoryList } from '@/components/directory-list';
 import { DataTable, EmptyState, PageHeader, formatBytes, formatDate } from '@/components/table';
 
-export const Route = createFileRoute('/vaults/$vault')({
+export const Route = createFileRoute('/vault/$vault')({
   component: RouteComponent,
 })
 
@@ -70,7 +70,7 @@ function RouteComponent() {
       <div className="p-6">
         <PageHeader
           title={vaultData.name}
-          description={`Manage vault details, permissions, and browse files`}
+          description={`Manage vault details, permissions, and browse files. This is just an example.`}
           action={
             <div className="flex gap-2">
               <Link to="/vaults" className="btn btn-ghost gap-2">
