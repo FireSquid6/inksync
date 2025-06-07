@@ -6,6 +6,7 @@ import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
 import type { Access, VaultInfoWithSize } from "../db/schema";
 import { makeCookie } from "./cookie";
+import { cron } from "@elysiajs/cron";
 
 export const app = new Elysia()
   .use(loggerPlugin)
@@ -13,6 +14,9 @@ export const app = new Elysia()
   .use(cors())
   .get("/ping", () => {
     return "pong!";
+  })
+  .delete("/clean", async (ctx) => {
+
   })
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
@@ -95,6 +99,35 @@ export const app = new Elysia()
       }
     }));
     return sizedVaults;
+  })
+  .get("/vaults/:vault/listdir/:directory", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated");
+    }
+    const { user } = ctx.auth;
+
+    const vault = ctx.getVaultByName(ctx.params.vault);
+    if (!vault) {
+      return ctx.status("Not Found", "Vault does not exist");
+    }
+
+    if (!ctx.canReadVault(user, ctx.params.vault)) {
+      return ctx.status("Unauthorized", "You don't have permissions to access this vault");
+    }
+
+    const directory = ctx.params.directory;
+
+    const fs = vault.getFilesystem();
+
+    if (!(await fs.exists(directory))) {
+      return ctx.status("Bad Request", "Directory does not exist");
+    }
+    if (!(await fs.isDir(directory))) {
+      return ctx.status("Bad Request", "Tried to list directory of a file");
+    }
+
+    const dirs = await fs.listdir(directory);
+    return dirs;
   })
   .get("/vaults/:vault", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
