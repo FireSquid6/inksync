@@ -1,8 +1,7 @@
 import { Command } from "@commander-js/extra-typings";
 import path from "path";
 import fs from "fs";
-import YAML from "yaml";
-import { serverConfigSchema, startServer } from "./server";
+import { startServer } from "./server";
 import { getClient, logResults, logResult, setConnectfile } from "./client";
 
 const server = new Command()
@@ -12,7 +11,7 @@ const server = new Command()
 server
   .command("start")
   .description("Starts an inksync server with the provided config file")
-  .option("-c, --config [directory]", "the directory to start the server in. Defaults to ${cwd}/inksync.config.yaml")
+  .option("-c, --config [directory]", "The filepath to the config file. Defaults to {cwd}/inskync.conf.ts")
   .action(({ config: configPath }) => {
     if (typeof configPath === "boolean" || configPath === undefined) {
       configPath = path.join(process.cwd(), "inksync.config.yaml");
@@ -22,16 +21,7 @@ server
       console.error(`Error: config path ${configPath} not found`);
       return;
     }
-    try {
-      const text = fs.readFileSync(configPath).toString();
-      const yaml = YAML.parse(text);
-      const parsed = serverConfigSchema.parse(yaml);
-      startServer(parsed);
-    } catch (e) {
-      e = e as Error;
-      console.error("Error reading config:")
-      console.error(e);
-    }
+    startServer(configPath);
   })
 
 const sync = new Command()

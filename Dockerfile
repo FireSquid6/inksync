@@ -8,8 +8,5 @@ COPY . /codebase
 WORKDIR /codebase
 RUN bun install --frozen-lockfile
 
-USER bun
-EXPOSE 3000/tcp
-
-# run app
+EXPOSE 3120/tcp
 ENTRYPOINT ["bun", "run", "apps/server/main.ts"]
