@@ -14,6 +14,14 @@ export const app = new Elysia()
   .get("/ping", () => {
     return "pong!";
   })
+  .get("/", (ctx) => {
+    const { config } = ctx.store;
+
+    if (config.serveUI) {
+      return ctx.redirect("/admin");
+    }
+    return ctx.status("Not Found");
+  })
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized", "You must be authenticated.");
