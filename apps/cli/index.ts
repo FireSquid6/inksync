@@ -14,7 +14,7 @@ server
   .option("-c, --config [directory]", "The filepath to the config file. Defaults to {cwd}/inskync.conf.ts")
   .action(({ config: configPath }) => {
     if (typeof configPath === "boolean" || configPath === undefined) {
-      configPath = path.join(process.cwd(), "inksync.config.yaml");
+      configPath = path.join(process.cwd(), "inksync-server-config.yaml");
     }
 
     if (!fs.existsSync(configPath)) {

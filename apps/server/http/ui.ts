@@ -3,14 +3,13 @@ import Elysia from "elysia";
 import type { BunFile } from "bun";
 
 function buildUi(directory: string) {
-  const cwd = process.cwd();
-  process.chdir(directory);
+  console.log(`Building UI in ${directory}`);
   Bun.spawnSync(["bun", "run", "build"], {
     stdin: "ignore",
     stdout: "inherit",
+    cwd: directory,
     stderr: "inherit",
   });
-  process.chdir(cwd);
 }
 
 function getFile(staticDir: string, httpPath: string): BunFile {
