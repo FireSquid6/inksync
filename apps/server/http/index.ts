@@ -14,9 +14,6 @@ export const app = new Elysia()
   .get("/ping", () => {
     return "pong!";
   })
-  .delete("/clean", async (ctx) => {
-
-  })
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized", "You must be authenticated.");
