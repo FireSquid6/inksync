@@ -3,4 +3,4 @@
 
 DIRECTORY="$(dirname "$0")"
 
-bun run "$DIRECTORY/apps/cli/index.ts" "$@"
+bun run "$DIRECTORY/packages/cli/index.ts" "$@"
