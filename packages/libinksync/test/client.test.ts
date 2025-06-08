@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { getDirectoryClient } from "../client/directory";
-import { vaultFromDirectory } from "../vault";
+import { vaultFromDirectory } from "../vault/directory";
 import path from "path";
 import fs from "fs";
 import { testdir } from "./setup.test";

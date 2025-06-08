@@ -11,33 +11,48 @@ export const Route = createFileRoute('/auth')({
 })
 
 async function signIn(username: string, password: string): Promise<Token | Error> {
-  const treaty = makeTreaty();
-  const { data, error } = await treaty.tokens.post({
-    username,
-    password,
-  });
+  try {
+    const treaty = makeTreaty();
+    const { data, error } = await treaty.tokens.post({
+      username,
+      password,
+    });
 
-  if (error !== null) {
-    return new Error(`Couldn't sign in: ${error.value}. Was your username or password incorrect?`);
+    if (error !== null) {
+      return new Error(`Couldn't sign in: ${error.value}. Was your username or password incorrect?`);
+    }
+    return data;
+  } catch (e) {
+    if (e instanceof Error) {
+      return e;
+    } else {
+      return new Error(`Unknown error: ${e}`);
+    }
   }
-
-  return data;
 }
 
 async function signUp(username: string, password: string, joincode: string): Promise<string | Error> {
-  const treaty = makeTreaty();
-  const { data, error } = await treaty.users.post({
-    username,
-    password,
-    joincode,
-  });
+  try {
+    const treaty = makeTreaty();
+    const { data, error } = await treaty.users.post({
+      username,
+      password,
+      joincode,
+    });
 
 
-  if (error !== null) {
-    return new Error(`Couldn't sign up: ${error.value}`);
+    if (error !== null) {
+      return new Error(`Couldn't sign up: ${error.value}`);
+    }
+
+    return data.id;
+  } catch (e) {
+    if (e instanceof Error) {
+      return e;
+    } else {
+      return new Error(`Unknown error: ${e}`);
+    }
   }
-
-  return data.id;
 }
 
 async function getUser(session: Token): Promise<PublicUser | Error> {

@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import type { Db } from "../db";
-import { Vault, vaultFromDirectory } from "libinksync/vault";
+import { vaultFromDirectory } from "libinksync/vault/directory";
+import { Vault } from "libinksync/vault";
 import * as schema from "../db/schema";
 import bearer from "@elysiajs/bearer";
 import { and, eq } from "drizzle-orm";

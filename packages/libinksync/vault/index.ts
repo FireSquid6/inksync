@@ -1,10 +1,6 @@
-import path from "path";
-import type { Store, Update } from "./store";
-import { BunSqliteStore } from "./store/bun-sqlite";
-import { DELETED_HASH, INKSYNC_DIRECTORY_NAME, STORE_DATABASE_FILE } from "./constants";
-import type { Filesystem } from "./filesystem";
-import { DirectoryFilesystem } from "./filesystem";
-
+import type { Store, Update } from "../store";
+import { DELETED_HASH } from "../constants";
+import type { Filesystem } from "../filesystem";
 
 export interface SuccessfulUpdate {
   type: "success";
@@ -20,17 +16,6 @@ export interface FailedUpdate {
 export type UpdateResult = SuccessfulUpdate | FailedUpdate
 
 
-export async function vaultFromDirectory(name: string, directory: string) {
-  const inksyncPath = path.join(directory, INKSYNC_DIRECTORY_NAME);
-  const dbPath = path.join(inksyncPath, STORE_DATABASE_FILE);
-
-  const fs = new DirectoryFilesystem(directory);
-  await fs.mkdir(path.dirname(dbPath));
-
-  const store = new BunSqliteStore(dbPath);
-
-  return new Vault(name, store, fs);
-}
 
 export class Vault {
   private store: Store;
