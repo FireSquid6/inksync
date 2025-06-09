@@ -1,15 +1,13 @@
 # inksync-monorepo
 
-To install dependencies:
+This is the monorepo for inksync. It contains multiple packages together in the `packages` directory. Everything is built in bun.
 
-```bash
-bun install
-```
+`cli` - contains the command line interface
+`mobile` - contains the mobile app built with capacitor
+`admin-ui` - contains the admin ui vite package 
+`server` - contains the http server for running your inksync server
 
-To run:
+The dockerfile is for an inksync server.
 
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.1.42. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## Development
+Run `bun install` in the root directory to get started

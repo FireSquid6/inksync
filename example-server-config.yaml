@@ -1,0 +1,15 @@
+# whether to serve the admin ui on /admin
+serveUI: true
+
+# directory to store vault directories
+vaulsDirectory: store/vaults
+
+# path to store databases
+databasePath: store/database.sqlite
+
+# If true, the server will create a superadmin joincode if no users are detected
+# you probably want this for the first time you spin up a self hosted version
+ensureJoinable: true
+
+
+# TODO - add adapters for different types of vaults

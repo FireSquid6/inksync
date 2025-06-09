@@ -1,11 +1,8 @@
 import { getTreaty } from "server/interface";
 
 export function makeTreaty(token?: string) {
-  const url = import.meta.env.VITE_SERVER_URL;
-  if (url === undefined) {
-    throw new Error(`VITE_SERVER_URL was undefined.`);
-  }
-
+  const hosturl = window.location.protocol + "//" + window.location.host;
+  const url = import.meta.env.PROD ? hosturl : "http://localhost:3120";
   const api = getTreaty(url, token);
 
 

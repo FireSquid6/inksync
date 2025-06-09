@@ -9,4 +9,4 @@ WORKDIR /codebase
 RUN bun install --frozen-lockfile
 
 EXPOSE 3120/tcp
-ENTRYPOINT ["bun", "run", "apps/server/main.ts"]
+ENTRYPOINT ["bun", "run", "packages/server/main.ts"]
