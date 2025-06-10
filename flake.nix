@@ -13,23 +13,25 @@
         flyctl
         typescript
       ];
+
+      node-modules = pkgs.mkYarnPackage {
+        name = "node-modules";
+        src = self;
+      };
     in
     rec {
       devShell = pkgs.mkShell {
         buildInputs = commonBuildInputs;
       };
-      packages.default = pkgs.buildNpmPackage {
+      packages.default = pkgs.stdenv.mkDerivation {
         name = "inksync-cli";
         src = self;
 
-        npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-
         buildInputs = commonBuildInputs;
         buildPhase = ''
-          echo "installing..."
-          bun install
+          ln -s ${node-modules}/libexec/inksync-monorepo/node_modules node_modules
           cd packages/cli
-          bun run build
+          ${pkgs.bun}/bin/bun run build
         '';
         installPhase = ''
           mkdir -p $out/bin
