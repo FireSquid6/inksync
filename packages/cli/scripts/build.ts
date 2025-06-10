@@ -10,6 +10,7 @@ async function main() {
     outdir: buildDir,
     target: "bun",
     minify: true,
+    
   });
 
 
@@ -19,7 +20,7 @@ async function main() {
     return;
   }
 
-  console.log("Build succeeded!");
+  console.log("Build succeeded");
 }
 
 

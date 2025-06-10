@@ -1,4 +1,4 @@
-# server
+# cli
 
 To install dependencies:
 
