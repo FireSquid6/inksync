@@ -66,7 +66,7 @@ export function useVaults() {
 export function useUsers(): { users: PublicUser[], loading: boolean } {
   console.log("calling use users");
   const treaty = useTreaty();
-  const pushError = usePushError(); 
+  const pushError = usePushError();
 
   const fetcher = useMemo(() => async (): Promise<PublicUser[]> => {
     const { data, error } = await treaty.users.get();
@@ -115,7 +115,7 @@ export function useJoincodes(): JoincodesHook {
 
   const deleteJoincode = useMemo(() => async (code: string): Promise<void> => {
     const { error } = await treaty.joincodes({ code: code }).delete();
-    
+
     if (error !== null) {
       pushError(wrapError("Error deleting joincode", error));
     }
@@ -142,4 +142,66 @@ export function useJoincodes(): JoincodesHook {
     joincodes: joincodes ?? [],
     loading: isLoading,
   }
+}
+
+
+
+export function useSpecificVault(vaultName: string): [VaultInfoWithSize | null, boolean] {
+  const treaty = useTreaty();
+  const pushError = usePushError();
+
+  const infoFetcher = async () => {
+    const { data, error } = await treaty.vaults({ vault: vaultName }).get();
+
+    if (error !== null) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  const { data: info, error: infoError, isLoading: infoLoading } = useSWR(`vaults/${vaultName}/info`, infoFetcher)
+
+
+  if (infoError) {
+    pushError(wrapError("Error fetching vault info:", infoError));
+
+    return [null, false];
+  }
+
+  if (infoLoading === true) {
+    return [null, true];
+  }
+
+  return [info!, false];
+}
+
+
+
+export type FetchedFilesystem = { file: string, isDirectory: boolean, size: number }[];
+
+export function useVaultFilesystem(vaultName: string): FetchedFilesystem {
+  const treaty = useTreaty();
+  const pushError = usePushError();
+
+  const fetchDirectories = useMemo(() => async () => {
+    const { data, error } = await treaty.vaults({ vault: vaultName }).listdir.get();
+
+    if (error) {
+      throw error;
+    }
+    return data;
+  }, [treaty]);
+
+  const { data, error } = useSWR(`/vaults/${vaultName}/dirlist`, fetchDirectories);
+  if (error) {
+    pushError(wrapError("Error fetching dirlist", error));
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export function useVaultAccess() {
+
 }

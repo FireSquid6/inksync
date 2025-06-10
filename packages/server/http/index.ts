@@ -104,7 +104,7 @@ export const app = new Elysia()
     }));
     return sizedVaults;
   })
-  .get("/vaults/:vault/listdir/:directory", async (ctx) => {
+  .get("/vaults/:vault/listdir", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
       return ctx.status("Unauthorized", "You must be authenticated");
     }
@@ -119,19 +119,21 @@ export const app = new Elysia()
       return ctx.status("Unauthorized", "You don't have permissions to access this vault");
     }
 
-    const directory = ctx.params.directory;
 
     const fs = vault.getFilesystem();
 
-    if (!(await fs.exists(directory))) {
-      return ctx.status("Bad Request", "Directory does not exist");
-    }
-    if (!(await fs.isDir(directory))) {
-      return ctx.status("Bad Request", "Tried to list directory of a file");
-    }
+    const allFilepaths = await fs.listdir("", true);
+    const files = await Promise.all(allFilepaths.map(async (f) => {
+      const isDir = await fs.isDir(f);
+      const size = await fs.sizeOf(f);
+      return {
+        file: f,
+        isDirectory: isDir,
+        size,
+      }
 
-    const dirs = await fs.listdir(directory);
-    return dirs;
+    }))
+    return files;
   })
   .get("/vaults/:vault", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
