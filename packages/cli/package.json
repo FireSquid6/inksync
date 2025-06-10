@@ -1,5 +1,5 @@
 {
-  "name": "inkync-cli",
+  "name": "inksync-cli",
   "module": "index.ts",
   "type": "module",
   "version": "0.1.0",
