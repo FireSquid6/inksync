@@ -2,21 +2,40 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
-  outputs = { self, nixpkgs }: 
-  let 
-    pkgs = nixpkgs.legacyPackages.x86_64-linux; 
-  in { 
-    allowUnfree = true;
-    devShells.x86_64-linux.default = pkgs.mkShell {
-      buildInputs = with pkgs; [
+  description = "Inksync";
+
+  outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
+    let
+      pkgs = import nixpkgs { inherit system; };
+      commonBuildInputs = with pkgs; [
         bun
         nodejs_20
         flyctl
         typescript
-
-        # nativescript stuff
-        jdk17
       ];
-    };
-  };
+    in
+    rec {
+      devShell = pkgs.mkShell {
+        buildInputs = commonBuildInputs;
+      };
+      packages.default = pkgs.buildNpmPackage {
+        name = "inksync-cli";
+        src = self;
+
+        npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+        buildInputs = commonBuildInputs;
+        buildPhase = ''
+          echo "installing..."
+          bun install
+          cd packages/cli
+          bun run build
+        '';
+        installPhase = ''
+          mkdir -p $out/bin
+          cp packages/cli/build/index.js $out/bin/index.js
+        '';
+      };
+    }
+  );
 }
