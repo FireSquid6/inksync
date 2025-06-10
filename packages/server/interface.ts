@@ -20,9 +20,13 @@ export function getTreaty(url: string, token?: string) {
 
 export function getApiFromAddress(address: string, name: string): VaultApi {
   const treaty = getTreaty(address);
+  return getApiFromTreaty(treaty, name);
+}
+
+export function getApiFromTreaty(treaty: Treaty, name: string): VaultApi {
   return {
     getAddress() {
-      return address;
+      return "treaty";
     },
     getName() {
       return name;
