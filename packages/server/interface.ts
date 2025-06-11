@@ -18,8 +18,8 @@ export function getTreaty(url: string, token?: string) {
   });
 }
 
-export function getApiFromAddress(address: string, name: string): VaultApi {
-  const treaty = getTreaty(address);
+export function getApiFromAddress(address: string, name: string, key: string): VaultApi {
+  const treaty = getTreaty(address, key);
   return getApiFromTreaty(treaty, name);
 }
 

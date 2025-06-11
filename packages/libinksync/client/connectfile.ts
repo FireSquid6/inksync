@@ -5,6 +5,7 @@ import path from "path";
 export const connectfileSchema = z.object({
   address: z.string(),
   name: z.string(),
+  key: z.string(),
 });
 
 export type Connectfile = z.infer<typeof connectfileSchema>;

@@ -17,14 +17,14 @@ export function getClient(directory: string): VaultClient | null {
 
   const connectfile = readConnectfile(connectfilePath);
 
-  const api = getApiFromAddress(connectfile.address, connectfile.name);
+  const api = getApiFromAddress(connectfile.address, connectfile.name, connectfile.key);
   const client = getDirectoryClient(api, directory, logger);
   return client;
 }
 
-export function setConnectfile(directory: string, vault: string, address: string) {
+export function setConnectfile(directory: string, vault: string, address: string, key: string) {
   const connectfilePath = path.join(directory, INKSYNC_DIRECTORY_NAME, CLIENT_CONNECTFILE);
-  writeConnectfile(connectfilePath, { name: vault, address });
+  writeConnectfile(connectfilePath, { name: vault, address, key });
 }
 
 export function logResult(filepath: string, syncResult: SyncResult) {

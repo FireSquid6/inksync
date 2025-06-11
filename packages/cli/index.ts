@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { startServer } from "./server";
 import { getClient, logResults, logResult, setConnectfile } from "./client";
+import { INKSYNC_DIRECTORY_NAME } from "libinksync/constants";
 
 const server = new Command()
   .name("server")
@@ -30,13 +31,31 @@ const sync = new Command()
 
 sync
   .command("connect")
-  .description("Connects the current workind directory to a vault")
-  .argument("<address>", "The address of the server")
-  .argument("<name>", "The name of the vault")
-  .action(async (address, name) => {
+  .description("Connects the current working directory to a vault")
+  .requiredOption("-a, --address <address>", "The address of the server")
+  .requiredOption("-n, --name <name>", "The name of the server")
+  .requiredOption("-k, --key <key>", "Key to use to connect to the server")
+  .action((options) => {
+    const { address, name, key } = options;
     const directory = process.cwd()
-    setConnectfile(directory, name, address);
+    setConnectfile(directory, name, address, key);
+
     console.log(`Setup ${directory} to connect to ${name}@${address}`)
+  });
+
+sync
+  .command("disconnect")
+  .description("Disconnects the cwd from any connected vault")
+  .action(async ()=> {
+    const client = getClient(process.cwd());
+
+    if (client === null) {
+      console.log(`${process.cwd()} not connected to any vaults`);
+      return;
+    }
+
+    fs.rmSync(`./${INKSYNC_DIRECTORY_NAME}`);
+
   });
 
 sync
