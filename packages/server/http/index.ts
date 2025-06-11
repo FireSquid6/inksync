@@ -4,12 +4,11 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
-import { makeCookie } from "./cookie";
 
 export const app = new Elysia()
   .use(loggerPlugin)
-  .use(vaultsPlugin())
   .use(cors())
+  .use(vaultsPlugin())
   .get("/ping", () => {
     return "pong!";
   })
@@ -21,6 +20,20 @@ export const app = new Elysia()
     }
     return ctx.status("Not Found");
   })
+  .guard({
+      beforeHandle(ctx) {
+        if (!ctx.authenticated) {
+          return ctx.status("Unauthorized", "You must be authenticated to do this");
+        }
+      }
+    },(app) => app 
+    .use(routes)
+  )
+
+export const routes = () => new Elysia({
+  name: "routes",
+})
+  .use(vaultsPlugin())
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
@@ -63,19 +76,11 @@ export const app = new Elysia()
     return vault;
   })
   .get("/vaults/:vault/files/:filepath", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated.");
-    }
-    const user = ctx.auth.user;
 
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
-    }
-
-    if (!(await ctx.canReadVault(user, vaultName))) {
-      return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
     const fp = decodeFilepath(filepath);

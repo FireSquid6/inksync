@@ -1,6 +1,9 @@
 import { z } from "zod";
 import fs from "fs";
 import YAML from "yaml";
+import path from "path";
+import type { Vault } from "libinksync/vault";
+import { vaultFromDirectory } from "libinksync/vault/directory";
 
 export const baseVaultSchema = z.object({
   name: z.string(),
@@ -60,3 +63,14 @@ export function getConfigFromPartial(partialConfig: PartialConfig): Config {
   }
 }
 
+
+export async function vaultFromInfo(vaultInfo: VaultInfo, config: Config): Promise<Vault> {
+  switch (vaultInfo.type) {
+    case "directory":
+      const fullDirectory = path.join(config.vaultsDirectory, vaultInfo.directory);
+      return await vaultFromDirectory(vaultInfo.name, fullDirectory);
+    case "bucket":
+      throw new Error("Bucket vaults are not implemented yet");
+  }
+
+}
