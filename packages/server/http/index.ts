@@ -111,46 +111,15 @@ export const routes = () => new Elysia({
       filepath: t.String(),
     }),
   })
-  // TODO - add vault guard to upload
-  // TODO - instead just put readable streams on the other post thing? This really won't work
-  //
-  // .post("/upload", async (ctx) => {
-  //   const { lifetime, file } = ctx.body;
-  //
-  //   if (lifetime < 0 || lifetime > 7200) {
-  //     return ctx.status(400, `Lifetime must be greater than 0 and less than 7200`);
-  //   }
-  //
-  //   const filename = randomUUID();
-  //   const filepath = path.join(`./temp/${filename}`);
-  //
-  //   const ws = fs.createWriteStream(filepath);
-  //   const stream = fileToReadable(file);
-  //   const error = await new Promise<Error | "OK">((resolve) => {
-  //     stream.pipe(ws);
-  //
-  //     ws.on("finish", () => resolve("OK"))
-  //     ws.on("error", (err) => resolve(err));
-  //     stream.on("error", (err) => resolve(err));
-  //   });
-  //
-  //   if (error !== "OK") {
-  //     return ctx.status(500, `Stream error: ${error.message} ${error.stack} ${error.name} ${error.cause}`);
-  //   }
-  //
-  //   return filename;
-  // }, {
-  //   body: t.Object({
-  //     lifetime: t.Number(),
-  //     file: t.File(),
-  //   })
-  // })
-  // TODO - allow user to subscribe to vault events.
   .ws("/stream", () => {
 
   })
 
-export const app = new Elysia()
+export const app = new Elysia({
+  serve: {
+    maxRequestBodySize: 1024 * 1024 * 512  // 512 MB
+  }
+})
   .use(rateLimit({
     max: 100000,
     duration: 1000,
@@ -161,14 +130,6 @@ export const app = new Elysia()
   .use(vaultsPlugin())
   .get("/ping", () => {
     return "pong!";
-  })
-  .get("/", (ctx) => {
-    const { config } = ctx.store;
-
-    if (config.serveUI) {
-      return ctx.redirect("/admin");
-    }
-    return ctx.status("Not Found");
   })
   .guard({
       beforeHandle(ctx) {
@@ -181,24 +142,3 @@ export const app = new Elysia()
   )
 
 export type App = typeof app;
-
-function fileToReadable(file: File): Readable {
-  const reader = file.stream().getReader();
-
-  return new Readable({
-    async read() {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          this.push(null);
-        } else {
-          this.push(Buffer.from(value));
-        }
-      } catch (e) {
-        const error = e instanceof Error ? e : undefined;
-        this.destroy(error);
-      }
-    }
-  });
-}
-

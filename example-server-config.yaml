@@ -1,15 +1,27 @@
-# whether to serve the admin ui on /admin
-serveUI: true
+# The port to serve on
+port: 3120
 
-# directory to store vault directories
-vaulsDirectory: store/vaults
-
-# path to store databases
-databasePath: store/database.sqlite
-
-# If true, the server will create a superadmin joincode if no users are detected
-# you probably want this for the first time you spin up a self hosted version
-ensureJoinable: true
+# the directory to store vaults in
+# all directory vaults are *relative* to this dir
+#
+# if you want your vaults to be able to be anywhere,
+# just set vaultsDirectory to / and use absolute paths
+vaultsDirectory: "store/vaults"
 
 
-# TODO - add adapters for different types of vaults
+# This is the important property. Put all of
+# the vaults you need here. See the schema below
+#
+# name: <string>                          # the name of the vault
+# encrypted: <boolean>                    # Whether its assumed that the vault is encrypted or not
+# type: "directory" | "bucket"
+#
+# if directory type:
+# directory: <string>
+#
+#
+vaults:
+  - name: "my-vault"
+    type: "directory"
+    encrypted: false
+    directory: "vault-one"

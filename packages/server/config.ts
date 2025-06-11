@@ -7,7 +7,6 @@ import { vaultFromDirectory } from "libinksync/vault/directory";
 
 export const baseVaultSchema = z.object({
   name: z.string(),
-  public: z.boolean(),
   encrypted: z.boolean(),
 });
 
@@ -26,9 +25,6 @@ export type VaultInfo = z.infer<typeof vaultSchema>;
 
 export const configSchema = z.object({
   port: z.optional(z.number()),
-  databasePath: z.optional(z.string()),
-  serveUI: z.optional(z.boolean()),
-  ensureJoinable: z.optional(z.boolean()),
   vaultsDirectory: z.optional(z.string()),
   vaults: z.optional(z.array(vaultSchema)),
   keyfilePath: z.optional(z.string()),
@@ -54,10 +50,7 @@ export function getConfigFromFile(filepath?: string): Config {
 export function getConfigFromPartial(partialConfig: PartialConfig): Config {
   return {
     port: partialConfig.port ?? 3120,
-    databasePath: partialConfig.databasePath ?? ":memory:",
-    serveUI: partialConfig.serveUI ?? true,
     vaultsDirectory: partialConfig.vaultsDirectory ?? "store/vaults",
-    ensureJoinable: partialConfig.ensureJoinable ?? false,
     vaults: partialConfig.vaults ?? [],
     keyfilePath: partialConfig.keyfilePath ?? "./keyfile.json",
   }
