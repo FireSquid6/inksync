@@ -4,31 +4,8 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
+import { rateLimit } from "elysia-rate-limit";
 
-export const app = new Elysia()
-  .use(loggerPlugin)
-  .use(cors())
-  .use(vaultsPlugin())
-  .get("/ping", () => {
-    return "pong!";
-  })
-  .get("/", (ctx) => {
-    const { config } = ctx.store;
-
-    if (config.serveUI) {
-      return ctx.redirect("/admin");
-    }
-    return ctx.status("Not Found");
-  })
-  .guard({
-      beforeHandle(ctx) {
-        if (!ctx.authenticated) {
-          return ctx.status("Unauthorized", "You must be authenticated to do this");
-        }
-      }
-    },(app) => app 
-    .use(routes)
-  )
 
 export const routes = () => new Elysia({
   name: "routes",
@@ -172,6 +149,36 @@ export const routes = () => new Elysia({
   .ws("/stream", () => {
 
   })
+
+export const app = new Elysia()
+  .use(rateLimit({
+    max: 100000,
+    duration: 1000,
+    errorResponse: "Rate limited",
+  }))
+  .use(loggerPlugin)
+  .use(cors())
+  .use(vaultsPlugin())
+  .get("/ping", () => {
+    return "pong!";
+  })
+  .get("/", (ctx) => {
+    const { config } = ctx.store;
+
+    if (config.serveUI) {
+      return ctx.redirect("/admin");
+    }
+    return ctx.status("Not Found");
+  })
+  .guard({
+      beforeHandle(ctx) {
+        if (!ctx.authenticated) {
+          return ctx.status("Unauthorized", "You must be authenticated to do this");
+        }
+      }
+    },(app) => app 
+    .use(routes)
+  )
 
 export type App = typeof app;
 

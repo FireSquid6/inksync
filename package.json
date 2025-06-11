@@ -1,12 +1,12 @@
 {
   "name": "inksync-monorepo",
-  "private": true,
   "version": "0.1.0",
+  "devDependencies": {
+    "nativescript": "^8.9.2"
+  },
+  "private": true,
   "workspaces": [
     "packages/*",
     "apps/*"
-  ],
-  "devDependencies": {
-    "nativescript": "^8.9.2"
-  }
+  ]
 }

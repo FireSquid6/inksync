@@ -42,9 +42,6 @@ export const vaultsPlugin = () => new Elysia({
     return notAuthenticated();
   })
 
-
-
-
 function notAuthenticated() {
   return {
     authenticated: false,

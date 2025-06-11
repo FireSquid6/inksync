@@ -21,6 +21,7 @@
     "an-array-of-english-words": "^2.0.0",
     "drizzle-orm": "^0.44.1",
     "elysia": "^1.3.3",
+    "elysia-rate-limit": "^4.4.0",
     "libinksync": "*",
     "yaml": "^2.8.0"
   }
