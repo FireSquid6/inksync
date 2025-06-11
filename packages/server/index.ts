@@ -4,8 +4,6 @@ import fs from "fs";
 import path from "path";
 
 export async function startApp(config: Config) {
-  const dbDirectory = path.dirname(config.databasePath);
-  fs.mkdirSync(dbDirectory, { recursive: true });
   fs.mkdirSync(config.vaultsDirectory, { recursive: true });
 
   app.store.config = config;

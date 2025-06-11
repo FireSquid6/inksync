@@ -1,6 +1,5 @@
 import { decodeFilepath } from "../encode";
 import { Elysia, t } from "elysia";
-import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";

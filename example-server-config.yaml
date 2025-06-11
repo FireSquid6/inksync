@@ -9,6 +9,13 @@ port: 3120
 vaultsDirectory: "store/vaults"
 
 
+# relative to the directory the server is started in
+#
+# each line that doesn't begin with a # is considered a valid key to
+# connect to the server with
+keyfilePath: "keyfile.txt"
+
+
 # This is the important property. Put all of
 # the vaults you need here. See the schema below
 #

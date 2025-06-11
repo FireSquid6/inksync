@@ -52,7 +52,7 @@ export function getConfigFromPartial(partialConfig: PartialConfig): Config {
     port: partialConfig.port ?? 3120,
     vaultsDirectory: partialConfig.vaultsDirectory ?? "store/vaults",
     vaults: partialConfig.vaults ?? [],
-    keyfilePath: partialConfig.keyfilePath ?? "./keyfile.json",
+    keyfilePath: partialConfig.keyfilePath ?? "./keyfile.txt",
   }
 }
 

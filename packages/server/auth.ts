@@ -13,13 +13,13 @@ export async function hasKey(key: string, keyfilePath: string): Promise<boolean>
     return false;
   }
 
-  const lines = (await file.text()).split(/\r?\n/);
+  const lines = (await file.text()).split("\n");
 
   for (const line of lines) {
     if (line.startsWith("#")) {
       continue;
     }
-
+    line.trim();
     if (line === key) {
       return true;
     }
