@@ -33,7 +33,7 @@ sync
   .description("Connects the current workind directory to a vault")
   .argument("<address>", "The address of the server")
   .argument("<name>", "The name of the vault")
-  .action(async (address, name ) => {
+  .action(async (address, name) => {
     const directory = process.cwd()
     setConnectfile(directory, name, address);
     console.log(`Setup ${directory} to connect to ${name}@${address}`)
@@ -158,8 +158,23 @@ sync
 
 const program = new Command()
 
+program
+  .command("generate-key")
+  .description("Generates a new key for use with the keyfile")
+  .action(() => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
+
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    console.log(result);
+  })
+
 program.addCommand(sync);
 program.addCommand(server);
+
 
 export async function runCli() {
   await program.parseAsync();
