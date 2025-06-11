@@ -14,6 +14,10 @@ export type PartialConfig = z.infer<typeof configSchema>;
 export type Config = Required<PartialConfig>;
 
 
+export const vaults = z.object({
+
+})
+
 export function getConfigFromFile(filepath?: string): Config {
   let partialConfig: PartialConfig = {};
 
