@@ -20,6 +20,9 @@ export async function hasKey(key: string, keyfilePath: string): Promise<boolean>
       continue;
     }
     line.trim();
+    if (line === "") {
+      continue;
+    }
     if (line === key) {
       return true;
     }

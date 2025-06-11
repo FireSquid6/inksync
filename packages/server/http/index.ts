@@ -131,13 +131,14 @@ export const app = new Elysia({
     return "pong!";
   })
   .guard({
-      beforeHandle(ctx) {
-        if (!ctx.authenticated) {
-          return ctx.status("Unauthorized", "You must be authenticated to do this");
-        }
+    beforeHandle(ctx) {
+      if (!ctx.authenticated) {
+        return ctx.status("Unauthorized", "You must be authenticated to do this");
       }
-    },(app) => app 
-    .use(routes)
+    }
+  }, (app) => app
+      .get("/hello", () => "hello, world")
+      .use(routes())
   )
 
 export type App = typeof app;

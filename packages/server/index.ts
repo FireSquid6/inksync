@@ -1,7 +1,6 @@
 import { vaultFromInfo, type Config } from "./config";
 import { app } from "./http";
 import fs from "fs";
-import path from "path";
 
 export async function startApp(config: Config) {
   fs.mkdirSync(config.vaultsDirectory, { recursive: true });

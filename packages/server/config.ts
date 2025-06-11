@@ -28,6 +28,7 @@ export const configSchema = z.object({
   vaultsDirectory: z.optional(z.string()),
   vaults: z.optional(z.array(vaultSchema)),
   keyfilePath: z.optional(z.string()),
+  doAuth: z.optional(z.boolean()),
 });
 
 export type PartialConfig = z.infer<typeof configSchema>;
@@ -49,6 +50,7 @@ export function getConfigFromFile(filepath?: string): Config {
 
 export function getConfigFromPartial(partialConfig: PartialConfig): Config {
   return {
+    doAuth: partialConfig.doAuth ?? true,
     port: partialConfig.port ?? 3120,
     vaultsDirectory: partialConfig.vaultsDirectory ?? "store/vaults",
     vaults: partialConfig.vaults ?? [],

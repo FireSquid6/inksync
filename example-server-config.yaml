@@ -1,3 +1,6 @@
+# this is a phenominally good idea to have on
+doAuth: true
+
 # The port to serve on
 port: 3120
 

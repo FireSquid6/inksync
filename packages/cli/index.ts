@@ -54,7 +54,7 @@ sync
       return;
     }
 
-    fs.rmSync(`./${INKSYNC_DIRECTORY_NAME}`);
+    fs.rmSync(`./${INKSYNC_DIRECTORY_NAME}`, { recursive: true });
 
   });
 
