@@ -15,6 +15,7 @@
     "@elysiajs/eden": "^1.2.0",
     "@elysiajs/node": "^1.2.6",
     "elysia": "^1.2.25",
+    "ncrypt-js": "^2.1.2",
     "zod": "^3.24.3"
   }
 }

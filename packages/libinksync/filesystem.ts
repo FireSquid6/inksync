@@ -1,5 +1,7 @@
 import path from "path";
 import fs from "fs";
+import ncrypt from "ncrypt-js";
+
 export interface Filesystem {
   readFrom(filepath: string): Promise<Blob>;
   writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void>;
@@ -16,52 +18,62 @@ export interface Filesystem {
   // downloadFile(url: string, filepath: string): Promise<string>;
 }
 
-// all reads and writes are encrypted
-// this should ONLY be used on the client. Server should just read from a directory
+// Wraps an existing filesystem to encrypt all reads and decrypts all writes
 //
-// Does NOT encrypt filepath names. Just their contents.
-//
-// This encrypts the files on the server, NOT the client. 
-// TODO!
-// export class EncryptedFilesystem implements Filesystem {
-//   private key: string;
-//   private fs: DirectoryFilesystem;
-//
-//   constructor(root: string, key: string) {
-//     this.key = key;
-//     this.fs = new DirectoryFilesystem(root);
-//   }
-//
-//   // encrypt for reads to be sent to the server
-//   async readFrom(filepath: string): Promise<Blob> {
-//
-//   }
-//   // decrupt for writes to be put on the user's drive
-//   async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
-//
-//   }
-//   async remove(filepath: string): Promise<void> {
-//
-//   }
-//   exists(filepath: string): Promise<boolean> {
-//     return this.fs.exists(filepath);
-//   }
-//   sizeOf(filepath: string): Promise<number> {
-//     return this.fs.sizeOf(filepath);
-//   }
-//   listdir(filepath: string, recursive?: boolean): Promise<string[]> {
-//     return this.fs.listdir(filepath, recursive);
-//   }
-//   isDir(filepath: string): Promise<boolean> {
-//     return this.fs.isDir(filepath)
-//   }
-//   copyTo(src: string, dest: string): Promise<void> {
-//     return this.fs.copyTo(src, dest);
-//   }
-//   mkdir(dirpath: string): Promise<void> {
-//     return this.fs.mkdir(dirpath);
-//   }
-// }
+// this should be used on the client in cases where the server is untrustworthy
+// (i.e. using google drive as a storage medium)
+export class EncryptedFilesystem implements Filesystem {
+  private fs: Filesystem;
+  private crypt: ncrypt
+
+  constructor(fs: Filesystem, key: string) {
+    this.fs = fs;
+    this.crypt = new ncrypt(key);
+  }
+
+  // encrypt for reads to be sent to the server
+  async readFrom(filepath: string): Promise<Blob> {
+    // ridiculous async code
+    const blob = await this.fs.readFrom(filepath);
+    const text = await blob.text();
+
+    const encrypted = this.crypt.encrypt(text);
+
+    return new Blob([encrypted]);
+  }
+  // decrupt for writes to be put on the user's drive
+  async writeTo(filepath: string, data: string | Blob | ArrayBuffer): Promise<void> {
+    const text = data.toString();
+    const decrypted = this.crypt.decrypt(text);
+
+    if (typeof decrypted !== "string") {
+      throw new Error("Got non-string when decrypting text");
+    }
+
+    return await this.fs.writeTo(filepath, decrypted);
+  }
+  remove(filepath: string): Promise<void> {
+    return this.fs.remove(filepath);
+  }
+  exists(filepath: string): Promise<boolean> {
+    return this.fs.exists(filepath);
+  }
+  sizeOf(filepath: string): Promise<number> {
+    return this.fs.sizeOf(filepath);
+  }
+  listdir(filepath: string, recursive?: boolean): Promise<string[]> {
+    return this.fs.listdir(filepath, recursive);
+  }
+  isDir(filepath: string): Promise<boolean> {
+    return this.fs.isDir(filepath)
+  }
+  copyTo(src: string, dest: string): Promise<void> {
+    return this.fs.copyTo(src, dest);
+  }
+  mkdir(dirpath: string): Promise<void> {
+    return this.fs.mkdir(dirpath);
+  }
+}
 
 export class DirectoryFilesystem implements Filesystem {
   private root: string;
