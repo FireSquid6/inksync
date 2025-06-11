@@ -56,3 +56,7 @@ export const joincodeTable = sqliteTable("joincodes", {
 });
 export type Joincode = InferSelectModel<typeof joincodeTable>;
 export type FetchedJoincode = Joincode & { creator: User };
+
+export type UserVaultAccess = Pick<User, "username" | "role"> & Pick<Access, "read" | "write"> & {
+  userId: string;
+};

@@ -93,8 +93,10 @@ export const app = new Elysia()
     }
 
     const vaults = await ctx.getAllVisibleVaults(ctx.auth.user);
+    console.log(vaults);
 
     const sizedVaults: VaultInfoWithSize[] = await Promise.all(vaults.map(async (v) => {
+      console.log(v.name);
       const fs = ctx.getVaultByName(v.name)!.getFilesystem();
       const size = await fs.sizeOf("");
       return {
@@ -168,6 +170,36 @@ export const app = new Elysia()
     }
 
     return await ctx.getAccess(vault);
+  })
+  .get("/vaults/:vault/all", async (ctx) => {
+    if (ctx.auth.type !== "authenticated") {
+      return ctx.status("Unauthorized", "You must be authenticated");
+    }
+
+    const vaultName = ctx.params.vault;
+    const user = ctx.auth.user;
+    if (!(await ctx.canReadVault(user, vaultName))) {
+      return ctx.status("Unauthorized", "You cannot read this vault");
+    }
+
+    const vault = ctx.getVaultByName(vaultName);
+    if (vault === null) {
+      return ctx.status(404, "Vault does not exist");
+    }
+    const access = await ctx.getAccess(vaultName);
+    const info = (await ctx.getVaultInfo(vaultName))!;
+    const fs = vault.getFilesystem();
+    const files = await fs.listdir("", true);
+    const size = await fs.sizeOf("");
+
+    return {
+      access,
+      info: {
+        ...info,
+        size,
+      },
+      files,
+    }
   })
   .patch("/vaults/:vault/access", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {

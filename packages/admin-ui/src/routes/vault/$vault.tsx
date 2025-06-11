@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { SidebarLayout } from '@/components/layout';
 import { VaultBrowser } from '@/components/directory-list';
 import { PageHeader, formatBytes, formatDate } from '@/components/table';
-import { useSpecificVault } from '@/lib/hooks';
+import { useSpecificVault, useVaultFilesystem } from '@/lib/hooks';
 
 export const Route = createFileRoute('/vault/$vault')({
   component: RouteComponent,
@@ -12,23 +12,7 @@ export const Route = createFileRoute('/vault/$vault')({
 
 function RouteComponent() {
   const { vault: vaultName } = Route.useParams();
-  const [info, loading] = useSpecificVault(vaultName);
-  const navigate = Route.useNavigate();
-
-  if (info === null) {
-    if (!loading) {
-      // error!
-      navigate({
-        to: "/vaults",
-      });
-    }
-    return (
-      <SidebarLayout>
-        <p>Loading...</p>
-      </SidebarLayout>
-    )
-  }
-
+  const { info, files } = useSpecificVault(vaultName);
 
   const handleDeleteVault = () => {
     if (confirm(`Are you sure you want to delete vault "${vaultName}"? This action cannot be undone.`)) {
@@ -41,7 +25,7 @@ function RouteComponent() {
     <SidebarLayout>
       <div className="p-6">
         <PageHeader
-          title={info.name}
+          title={info?.name ?? "loading..."}
           description={`Manage vault details, permissions, and browse files. This is just an example.`}
           action={
             <div className="flex gap-2">
@@ -66,7 +50,7 @@ function RouteComponent() {
               <div className="flex items-center gap-3">
                 <HardDrive className="w-8 h-8 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold">{formatBytes(info.size)}</div>
+                  <div className="text-2xl font-bold">{formatBytes(info?.size ?? 0)}</div>
                   <div className="text-sm text-base-content/70">Total Size</div>
                 </div>
               </div>
@@ -80,20 +64,20 @@ function RouteComponent() {
               <div>
                 <label className="text-sm font-medium text-base-content/70">Directory</label>
                 <div className="font-mono text-sm bg-base-200 px-3 py-2 rounded mt-1">
-                  {info.location}
+                  {info?.location ?? "/loading"}
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-base-content/70">Created</label>
                 <div className="text-sm px-3 py-2 mt-1">
-                  {formatDate(info.createdAt)}
+                  {formatDate(info?.createdAt ?? 0)}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Directory Browser */}
-          <VaultBrowser vaultName={info.name} />
+          <VaultBrowser files={files} />
         </div>
       </div>
     </SidebarLayout>

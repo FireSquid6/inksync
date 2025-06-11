@@ -1,7 +1,6 @@
 import { Folder } from "lucide-react";
 import { useState } from 'react';
 import { DataTable, EmptyState } from "./table";
-import { useVaultFilesystem } from "@/lib/hooks";
 
 interface DirectoryListProps {
   directories: string[];
@@ -43,8 +42,7 @@ export function DirectoryList({ directories, root, onDirectoryClick }: Directory
   );
 }
 
-export function VaultBrowser({ vaultName }: { vaultName: string }) {
-  const files = useVaultFilesystem(vaultName);
+export function VaultBrowser({ files }: { files: string[] }) {
   console.log(files);
 
   const [currentRoot, setCurrentRoot] = useState("");

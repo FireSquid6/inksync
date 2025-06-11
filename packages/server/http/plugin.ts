@@ -54,7 +54,14 @@ export const vaultsPlugin = () => {
       const { db, vaults, config } = ctx.store
       return {
         getVaultByName(name: string): Vault | null {
+          console.log("looking for:", name);
+          console.log(vaults.length);
+          for (const vault of vaults) {
+            console.log(vault);
+            console.log("Have a vault with name:", vault.getName);
+          }
           const vault = vaults.find((v) => v.getName() === name);
+          console.log("Found vault:", vault);
           return vault ?? null;
         },
         async addVault(vaultInfo: schema.VaultInfo) {
@@ -336,11 +343,20 @@ export const vaultsPlugin = () => {
               .values(access)
           }
         },
-        async getAccess(vaultName: string) {
-          return await db
-            .select()
+        async getAccess(vaultName: string): Promise<schema.UserVaultAccess[]> {
+          const access = await db
+            .select({
+              userId: schema.accessTable.userId,
+              username: schema.usersTable.username,
+              read: schema.accessTable.read,
+              write: schema.accessTable.write,
+              role: schema.usersTable.role
+            })
             .from(schema.accessTable)
-            .where(eq(schema.accessTable.vaultName, vaultName))
+            .innerJoin(schema.usersTable, eq(schema.accessTable.userId, schema.usersTable.id))
+            .where(eq(schema.accessTable.vaultName, vaultName));
+
+          return access
         },
         async getAllVisibleVaults(user: schema.User) {
           const vaults = await db

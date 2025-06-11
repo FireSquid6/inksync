@@ -3,7 +3,7 @@ import { errorsAtom, authAtom } from "./state";
 import useSWR, { useSWRConfig } from "swr";
 import type { Treaty } from "server/interface";
 import { makeTreaty } from "./treaty";
-import type { FetchedJoincode, Joincode, PublicUser, VaultInfoWithSize } from "server/db/schema";
+import type { FetchedJoincode, Joincode, PublicUser, UserVaultAccess, VaultInfoWithSize } from "server/db/schema";
 import { wrapError } from "./helpers";
 import { useMemo } from "react";
 
@@ -145,35 +145,33 @@ export function useJoincodes(): JoincodesHook {
 }
 
 
+export interface SpecificVault {
+  info: VaultInfoWithSize | null;
+  access: UserVaultAccess[];
+  files: string[]; 
+}
 
-export function useSpecificVault(vaultName: string): [VaultInfoWithSize | null, boolean] {
+export function useSpecificVault(vaultName: string): SpecificVault {
   const treaty = useTreaty();
   const pushError = usePushError();
 
-  const infoFetcher = async () => {
-    const { data, error } = await treaty.vaults({ vault: vaultName }).get();
+  const infoFetcher = useMemo(() => async () => {
+    const { data, error } = await treaty.vaults({ vault: vaultName }).all.get();
 
     if (error !== null) {
-      throw error;
+      pushError(wrapError("Error fetching info:", error));
     }
 
     return data;
+  }, [treaty, vaultName, pushError]);
+
+  const { data } = useSWR(`vaults/${vaultName}/info`, infoFetcher)
+
+  return {
+    info: data?.info ?? null,
+    access: data?.access!,
+    files: data?.files!,
   }
-
-  const { data: info, error: infoError, isLoading: infoLoading } = useSWR(`vaults/${vaultName}/info`, infoFetcher)
-
-
-  if (infoError) {
-    pushError(wrapError("Error fetching vault info:", infoError));
-
-    return [null, false];
-  }
-
-  if (infoLoading === true) {
-    return [null, true];
-  }
-
-  return [info!, false];
 }
 
 
