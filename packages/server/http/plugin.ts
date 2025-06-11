@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { Vault } from "libinksync/vault";
-import bearer from "@elysiajs/bearer";
 import type { Config } from "../config";
+import bearer from "@elysiajs/bearer";
 
 
 
@@ -23,6 +23,15 @@ export const vaultsPlugin = () => {
         getAllNames(): string[] {
           return ctx.store.vaults.map((v) => v.getName());
         }
+      }
+    })
+    .derive({ as: "global"}, (ctx): { authenticated: boolean } => {
+      // const bearer = ctx.bearer;
+      // const { config } = ctx.store;
+
+      // TODO - proper auth
+      return { 
+        authenticated: true
       }
     })
 }

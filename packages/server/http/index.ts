@@ -4,7 +4,6 @@ import { Readable } from "stream";
 import { cors } from "@elysiajs/cors";
 import { loggerPlugin } from "./logger";
 import { vaultsPlugin } from "./plugin";
-import type { Access, VaultInfoWithSize } from "../db/schema";
 import { makeCookie } from "./cookie";
 
 export const app = new Elysia()
@@ -23,19 +22,10 @@ export const app = new Elysia()
     return ctx.status("Not Found");
   })
   .post("/vaults/:vault/files/:filepath", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated.");
-    }
-    const user = ctx.auth.user;
-
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
-    }
-
-    if (!(await ctx.canWriteVault(user, vaultName))) {
-      return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
     const fp = decodeFilepath(filepath);
@@ -57,184 +47,20 @@ export const app = new Elysia()
       file: t.Union([t.File(), t.Literal("DELETE")]),
     })
   })
-  .post("/vaults", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized");
-    }
-    const { user } = ctx.auth;
-    const { vaults } = ctx.store;
-
-    if (!(user.role === "Admin" || user.role === "Superadmin")) {
-      return ctx.status("Unauthorized", "Must be an admin to make new vaults");
-    }
-
-    const { vaultName, directory } = ctx.body;
-
-    if (vaultName.length <= 4 || vaultName.length >= 16) {
-      return ctx.status("Bad Request", "Vault name must be between 4 and 16 characters");
-    }
-
-    const duplicateName = vaults.find((v) => v.getName() === vaultName);
-    if (duplicateName !== undefined) {
-      return ctx.status("Bad Request", "Vault name taken");
-    }
-
-    const vault = await ctx.createVault(vaultName, directory, user.id);
-    return vault;
-  }, {
-    body: t.Object({
-      vaultName: t.String(),
-      directory: t.String(),
-    })
-  })
   .get("/vaults", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
-    }
+    const { config } = ctx.store;
 
-    const vaults = await ctx.getAllVisibleVaults(ctx.auth.user);
-    console.log(vaults);
-
-    const sizedVaults: VaultInfoWithSize[] = await Promise.all(vaults.map(async (v) => {
-      console.log(v.name);
-      const fs = ctx.getVaultByName(v.name)!.getFilesystem();
-      const size = await fs.sizeOf("");
-      return {
-        ...v,
-        size,
-      }
-    }));
-    return sizedVaults;
-  })
-  .get("/vaults/:vault/listdir", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
-    }
-    const { user } = ctx.auth;
-
-    const vault = ctx.getVaultByName(ctx.params.vault);
-    if (!vault) {
-      return ctx.status("Not Found", "Vault does not exist");
-    }
-
-    if (!ctx.canReadVault(user, ctx.params.vault)) {
-      return ctx.status("Unauthorized", "You don't have permissions to access this vault");
-    }
-
-
-    const fs = vault.getFilesystem();
-
-    const allFilepaths = await fs.listdir("", true);
-    const files = await Promise.all(allFilepaths.map(async (f) => {
-      const isDir = await fs.isDir(f);
-      const size = await fs.sizeOf(f);
-      return {
-        file: f,
-        isDirectory: isDir,
-        size,
-      }
-
-    }))
-    return files;
+    return config.vaults;
   })
   .get("/vaults/:vault", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
+    const { vaults } = ctx.store;
+    const vault = vaults.find((v) => v.getName() === ctx.params.vault);
+
+    if (vault === undefined) {
+      return ctx.status("Not Found",)
     }
 
-    const info = await ctx.getVaultInfo(ctx.params.vault);
-    if (info === null) {
-      return ctx.status("Not Found", "This vault does not exist");
-    }
-
-    const user = ctx.auth.user;
-    if (!await ctx.canReadVault(user, ctx.params.vault)) {
-      return ctx.status("Unauthorized", "You cannot view this vault");
-    }
-    const fs = ctx.getVaultByName(ctx.params.vault)!.getFilesystem();
-    const size = await fs.sizeOf("");
-
-    return {
-      ...info,
-      size,
-    }
-  })
-  .get("/vaults/:vault/access", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
-    }
-    const vault = ctx.params.vault;
-    const user = ctx.auth.user;
-    if (!(await ctx.canReadVault(user, vault))) {
-      return ctx.status("Unauthorized", "You cannot read this vault");
-    }
-
-    return await ctx.getAccess(vault);
-  })
-  .get("/vaults/:vault/all", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
-    }
-
-    const vaultName = ctx.params.vault;
-    const user = ctx.auth.user;
-    if (!(await ctx.canReadVault(user, vaultName))) {
-      return ctx.status("Unauthorized", "You cannot read this vault");
-    }
-
-    const vault = ctx.getVaultByName(vaultName);
-    if (vault === null) {
-      return ctx.status(404, "Vault does not exist");
-    }
-    const access = await ctx.getAccess(vaultName);
-    const info = (await ctx.getVaultInfo(vaultName))!;
-    const fs = vault.getFilesystem();
-    const files = await fs.listdir("", true);
-    const size = await fs.sizeOf("");
-
-    return {
-      access,
-      info: {
-        ...info,
-        size,
-      },
-      files,
-    }
-  })
-  .patch("/vaults/:vault/access", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated");
-    }
-    const user = ctx.auth.user;
-
-    if (!(user.role === "Superadmin" || user.role === "Admin")) {
-      return ctx.status("Unauthorized", "Only admins and superadmins can modify vault perms");
-    }
-    const { permissions, vaultName } = ctx.body;
-    const info = await ctx.getVaultInfo(vaultName);
-    if (info === null) {
-      return ctx.status("Not Found", "Vault does not exist");
-    }
-
-    const access: Access[] = permissions.map((p) => {
-      return {
-        userId: p.userId,
-        read: p.read,
-        write: p.write,
-        vaultName,
-      }
-    });
-
-    await Promise.all(access.map((a) => ctx.updatePermission(a)));
-  }, {
-    body: t.Object({
-      vaultName: t.String(),
-      permissions: t.Array(t.Object({
-        userId: t.String(),
-        read: t.Boolean(),
-        write: t.Boolean(),
-      }))
-    })
+    return vault;
   })
   .get("/vaults/:vault/files/:filepath", async (ctx) => {
     if (ctx.auth.type !== "authenticated") {
@@ -268,20 +94,12 @@ export const app = new Elysia()
 
   })
   .get("/vaults/:vault/updates", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated.");
-    }
     const { vault: vaultName } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     const timestamp = ctx.query.since ?? 0;
-    const user = ctx.auth.user;
 
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
-    }
-
-    if (!(await ctx.canReadVault(user, vaultName))) {
-      return ctx.status("Unauthorized", "This user cannot access this vault");
     }
 
     const updates = vault.getUpdatesSince(timestamp);
@@ -295,20 +113,12 @@ export const app = new Elysia()
     }),
   })
   .get("/vaults/:vault/updates/:filepath", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "You must be authenticated.");
-    }
-
-    const user = ctx.auth.user;
     const { vault: vaultName, filepath } = ctx.params;
     const vault = ctx.getVaultByName(vaultName);
     if (!vault) {
       return ctx.status(404, `Vault ${vaultName} not found`);
     }
 
-    if (!(await ctx.canReadVault(user, vaultName))) {
-      return ctx.status(404, "This user cannot access this vault");
-    }
     const fp = decodeFilepath(filepath);
 
     const result = vault.getUpdateFor(fp);
@@ -357,217 +167,6 @@ export const app = new Elysia()
   .ws("/stream", () => {
 
   })
-  .post("/users", async (ctx) => {
-    const { joincode, username, password } = ctx.body;
-
-    if (username.length <= 4 || username.length >= 24) {
-      return ctx.status(400, "Username must be between 4 and 24 characters");
-    }
-
-    if (!isValidPassword(password)) {
-      return ctx.status(400, "Password invalid. Must contain captial, lowercase, special, and number. Must be between 12 and 32 characters");
-    }
-
-    await waitForRandomAmount();
-    const user = await ctx.createUser(username, password, joincode);
-
-    if (user === null) {
-      return ctx.status(400, "Joincode was invalid");
-    }
-
-    return {
-      id: user.id,
-      username: user.id,
-      role: user.role,
-    };
-  }, {
-    body: t.Object({
-      joincode: t.String(),
-      username: t.String(),
-      password: t.String(),
-    }),
-  })
-  .get("/users", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized");
-    }
-
-    return await ctx.getAllUsers();
-  })
-  .patch("/users/:id", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized");
-    }
-
-    if (ctx.auth.user.role !== "Superadmin") {
-      return ctx.status("Unauthorized", "Must be a superadmin to modify user roles");
-    }
-    const otherUser = await ctx.getUser(ctx.params.id);
-
-    if (otherUser === null) {
-      return ctx.status("Not Found");
-    }
-
-    switch (ctx.body.role) {
-      case "Admin":
-        await ctx.changeUserRole(otherUser.id, "Admin");
-        break;
-      case "User":
-        await ctx.changeUserRole(otherUser.id, "User");
-        break;
-      default:
-        return ctx.status(400, `${ctx.body.role} is not a role you can promote to`)
-    }
-  }, {
-    body: t.Object({
-      role: t.String(),
-    })
-  })
-  .delete("/users/:id", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized");
-    }
-
-    const deletingUser = await ctx.getUser(ctx.params.id);
-    const myRole = ctx.auth.user.role;
-
-    if (deletingUser === null) {
-      return ctx.status("Not Found");
-    }
-
-    const canDelete =
-      (myRole === "Superadmin" && deletingUser.role !== "Superadmin")
-      || (myRole === "Admin" && deletingUser.role === "User");
-
-
-    if (canDelete) {
-      await ctx.deleteUser(deletingUser.id);
-
-      ctx.set.status = 200;
-      return;
-    }
-
-    return ctx.status("Unauthorized");
-  })
-  .get("/users/:id", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "Must be authenticated to access");
-    }
-
-    const user = await ctx.getUser(ctx.params.id);
-    if (user === null) {
-      return ctx.status("Not Found", `User ${ctx.params.id} not found`);
-    }
-
-    return {
-      id: user.id,
-      username: user.username,
-      role: user.role
-    }
-  })
-  .post("/tokens", async (ctx) => {
-    await waitForRandomAmount();
-    const { username, password } = ctx.body;
-
-    const userId = await ctx.validateUsernamePassword(username, password);
-
-    if (userId == null) {
-      return ctx.status("Unauthorized");
-    }
-    const { token, expirationTime } = await ctx.makeNewToken(userId);
-    const url = new URL(ctx.request.url);
-
-    const cookie = makeCookie({
-      domain: url.hostname,
-      data: token,
-      expires: expirationTime,
-      name: "token",
-    })
-    ctx.set.headers["set-cookie"] = cookie;
-
-    return {
-      token,
-      userId,
-      expiresAt: expirationTime,
-    }
-  }, {
-    body: t.Object({
-      username: t.String(),
-      password: t.String(),
-    })
-  })
-  .delete("/tokens/:token", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "Must be authenticated to access");
-    }
-    const { user } = ctx.auth;
-    const { token } = ctx.params;
-
-    await ctx.deleteToken(user.id, token);
-
-    const url = new URL(ctx.request.url);
-    const cookie = makeCookie({
-      domain: url.hostname,
-      data: "",
-      expires: Date.now(),
-      name: "token",
-    });
-    ctx.set.headers["set-cookie"] = cookie;
-
-    return ctx.status("OK");
-  })
-  .post("/joincodes", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "Must be authenticated to access");
-    }
-    const { user } = ctx.auth;
-    const { role } = ctx.body;
-
-    const isValid = (user.role === "Superadmin" && (role === "Admin" || role === "User"))
-      || (user.role === "Admin" && role === "User");
-
-    if (!isValid) {
-      return ctx.status(400, "You do not have permission to create a joincode for that role");
-    }
-
-    const joincode = await ctx.createJoincode(role, user.id)
-    return joincode;
-  }, {
-    body: t.Object({
-      role: t.String(),
-    })
-  })
-  .delete("/joincodes/:code", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", `Must be authenticated to access, instead ${ctx.auth.type}`);
-    }
-    const { user } = ctx.auth;
-    const joincode = await ctx.getJoincode(ctx.params.code)
-    if (joincode === null) {
-      return ctx.status("Not Found");
-    }
-
-    const canDelete = (user.role === "Superadmin") || (user.role === "Admin" && joincode.creator === user.id)
-
-    if (canDelete) {
-      await ctx.deleteJoincode(joincode.code);
-      return ctx.status("OK");
-    }
-    return ctx.status("Unauthorized");
-
-  })
-  .get("/joincodes", async (ctx) => {
-    if (ctx.auth.type !== "authenticated") {
-      return ctx.status("Unauthorized", "Must be authenticated to access");
-    }
-    const { user } = ctx.auth;
-    if (!(user.role === "Admin" || user.role === "Superadmin")) {
-      return ctx.status("Unauthorized");
-    }
-
-    const joincodes = await ctx.getAllJoincodes();
-    return joincodes;
-  })
 
 export type App = typeof app;
 
@@ -591,24 +190,3 @@ function fileToReadable(file: File): Readable {
   });
 }
 
-function isValidPassword(password: string): boolean {
-  if (password.length < 12 || password.length > 32) {
-    return false;
-  }
-
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-
-  return hasUppercase && hasLowercase && hasNumber && hasSpecial;
-}
-
-// waits for somewhere between 0s and 1.5s
-// this is for authentication functions --- prevents an
-// attacker from figuring out if something e
-async function waitForRandomAmount() {
-  const t = Math.random() * 1.5;
-
-  await new Promise((resolve) => setTimeout(resolve, t))
-}
