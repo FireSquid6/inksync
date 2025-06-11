@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">inksync</string>
-    <string name="title_activity_main">inksync</string>
-    <string name="package_name">dev.inksync.app</string>
-    <string name="custom_url_scheme">dev.inksync.app</string>
-</resources>
