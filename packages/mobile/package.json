@@ -15,6 +15,7 @@
     "@capacitor/core": "^7.3.0",
     "@capacitor/filesystem": "^7.1.1",
     "@tailwindcss/vite": "^4.1.10",
+    "@tanstack/react-router": "^1.121.2",
     "daisyui": "^5.0.43",
     "jotai": "^2.12.5",
     "react": "^19.1.0",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@capacitor/cli": "^7.3.0",
     "@eslint/js": "^9.25.0",
+    "@tanstack/router-plugin": "^1.121.7",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
