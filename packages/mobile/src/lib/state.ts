@@ -29,12 +29,12 @@ export type ConnectionStatusHook =
   | {
     status: ConnectionStatus;
     connection: Connection;
-    sync: () => void;
+    sync: () => Promise<void>;
   }
   | {
     status: null,
     connection: null;
-    sync: () => void;
+    sync: () => Promise<void>;
   }
 
 export function useStatus(id: string) {
@@ -57,7 +57,7 @@ export function useSyncableConnection(id: string): ConnectionStatusHook {
     return {
       status: null,
       connection: null,
-      sync: () => { },
+      sync: async () => { },
     }
   }
 
@@ -68,7 +68,7 @@ export function useSyncableConnection(id: string): ConnectionStatusHook {
 
     const results = await client.syncAll();
     const type = results.find(([_, r]) => r.domain === "bad") === undefined ? "good" : "bad";
-    
+
 
     syncs.push({
       results,

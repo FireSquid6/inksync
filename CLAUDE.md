@@ -25,7 +25,6 @@ bun install           # Install all dependencies
 ### Server (`packages/server`)
 ```bash
 bun run dev          # Start development server (runs main.ts)
-bun run generate     # Generate Drizzle database migrations
 ```
 
 ### CLI (`packages/cli`) 
@@ -38,22 +37,18 @@ bun run program     # Run CLI directly
 ```bash
 bun run dev         # Start Vite development server
 bun run build       # TypeScript compile + Vite build
-bun run sync        # Build and sync with Capacitor
+bunx cap sync       # Build and sync with Capacitor
 bun run lint        # ESLint
+bunx cap run android # Run on Android device/emulator
 ```
 
 ### Shared Library (`packages/libinksync`)
 ```bash
-bun run build       # Build library
+bun run build       # Build library  
+bun test            # Run tests
 ```
 
 ## Architecture Patterns
-
-### Database Layer
-- **Drizzle ORM** with SQLite for data persistence
-- Schema defines users, vaults, tokens, and access control
-- Database migrations in `drizzle/` directory
-- Configuration in `drizzle.config.ts`
 
 ### API Layer (Server)
 - **Elysia.js** TypeScript web framework
@@ -77,7 +72,6 @@ bun run build       # Build library
 
 - **Server config**: `inksync-server-config.yaml` (YAML-based configuration)
 - **Capacitor config**: `capacitor.config.ts` (mobile app configuration)
-- **Database**: `drizzle.config.ts` (ORM configuration)
 
 ## Build System
 
