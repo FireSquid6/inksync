@@ -1,7 +1,6 @@
 import path from "path";
 
 async function main() {
-
   const buildDir = path.resolve(__dirname, "../build");
   const entrypoint = path.resolve(__dirname, "../index.ts");
 
@@ -10,7 +9,6 @@ async function main() {
     outdir: buildDir,
     target: "bun",
     minify: true,
-    
   });
 
 
